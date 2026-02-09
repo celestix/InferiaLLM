@@ -16,7 +16,7 @@ from fastapi import (
     BackgroundTasks,
     Query,
 )
-from inferia.services.guardrail.api_models import GuardrailScanRequest, ScanType
+from inferia.common.schemas.guardrail import GuardrailScanRequest, ScanType
 from inferia.services.filtration.models import (
     InferenceRequest,
     InferenceResponse,
