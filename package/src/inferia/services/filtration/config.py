@@ -132,6 +132,14 @@ class Settings(BaseSettings):
         default=None, validation_alias="SECRET_ENCRYPTION_KEY"
     )
 
+    # Service URLs (Microservices)
+    guardrail_service_url: str = Field(
+        default="http://localhost:8002", validation_alias="GUARDRAIL_SERVICE_URL"
+    )
+    data_service_url: str = Field(
+        default="http://localhost:8003", validation_alias="DATA_SERVICE_URL"
+    )
+
     # Infrastructure / Provider Keys (Managed via Dashboard/DB)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
 

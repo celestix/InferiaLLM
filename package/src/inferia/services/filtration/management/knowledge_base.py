@@ -7,8 +7,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 from db.database import get_db
-from data.engine import data_engine
-from data.parser import parser
+
+import httpx
+from config import settings
 from schemas.knowledge_base import KBFileResponse
 from schemas.auth import PermissionEnum
 from management.dependencies import get_current_user_context
@@ -23,7 +24,16 @@ async def list_knowledge_collections(
 ):
     user_ctx = get_current_user_context(request)
     authz_service.require_permission(user_ctx, PermissionEnum.KB_LIST)
-    return await data_engine.list_collections(user_ctx.org_id)
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{settings.data_service_url}/collections",
+            params={"org_id": user_ctx.org_id},
+            timeout=5.0,
+        )
+        if response.status_code == 200:
+            return response.json().get("collections", [])
+        return []
 
 
 @router.post("/data/upload", status_code=201)
@@ -37,31 +47,27 @@ async def upload_knowledge_document(
     authz_service.require_permission(user_ctx, PermissionEnum.KB_ADD_DATA)
 
     try:
-        text_content = await parser.extract_text(file)
+        async with httpx.AsyncClient() as client:
+            # Re-read file content for forwarding
+            file_content = await file.read()
+            files = {"file": (file.filename, file_content, file.content_type)}
+            data = {"collection_name": collection_name, "org_id": user_ctx.org_id}
 
-        if not text_content.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="File content is empty or could not be extracted",
+            response = await client.post(
+                f"{settings.data_service_url}/upload",
+                data=data,
+                files=files,
+                timeout=30.0,
             )
 
-        doc_id = str(uuid.uuid4())
-        metadata = {
-            "source": file.filename,
-            "type": "file_upload",
-            "uploaded_by": user_ctx.user_id,
-        }
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Data Service failed: {response.text}",
+                )
 
-        success = data_engine.add_documents(
-            collection_name=collection_name,
-            documents=[text_content],
-            metadatas=[metadata],
-            ids=[doc_id],
-            org_id=user_ctx.org_id,
-        )
-
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to ingest document")
+            result = response.json()
+            doc_id = result.get("doc_id")
 
         # Log to audit service
         from audit.service import audit_service
@@ -96,13 +102,21 @@ async def list_collection_files(
     user_ctx = get_current_user_context(request)
     authz_service.require_permission(user_ctx, PermissionEnum.KB_LIST)
 
-    files = await data_engine.list_files(collection_name, user_ctx.org_id)
-    return [
-        KBFileResponse(
-            filename=f["filename"],
-            doc_id=f["doc_id"],
-            uploaded_by=f["uploaded_by"],
-            doc_count=f["doc_count"],
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{settings.data_service_url}/collections/{collection_name}/files",
+            params={"org_id": user_ctx.org_id},
+            timeout=10.0,
         )
-        for f in files
-    ]
+        if response.status_code == 200:
+            files = response.json().get("files", [])
+            return [
+                KBFileResponse(
+                    filename=f["filename"],
+                    doc_id=f["doc_id"],
+                    uploaded_by=f["uploaded_by"],
+                    doc_count=f["doc_count"],
+                )
+                for f in files
+            ]
+        return []

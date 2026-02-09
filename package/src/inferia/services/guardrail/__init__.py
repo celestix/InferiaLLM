@@ -2,11 +2,12 @@
 Guardrail module for LLM safety checks.
 """
 
-# Models are used by router
+from .engine import guardrail_engine
 from .models import GuardrailResult, Violation, ViolationType
 from .service_config import guardrail_settings
 
 __all__ = [
+    "guardrail_engine",
     "GuardrailResult",
     "Violation",
     "ViolationType",

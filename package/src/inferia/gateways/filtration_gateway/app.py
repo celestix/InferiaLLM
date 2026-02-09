@@ -30,10 +30,7 @@ from config import settings
 logging.basicConfig(
     level=getattr(logging, settings.log_level),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("debug.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.FileHandler("debug.log"), logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -41,7 +38,7 @@ from models import HealthCheckResponse, ErrorResponse
 from gateway.middleware import (
     RequestIDMiddleware,
     StandardHeadersMiddleware,
-    ProcessingTimeMiddleware
+    ProcessingTimeMiddleware,
 )
 from gateway.internal_middleware import internal_api_key_middleware
 from rbac.middleware import auth_middleware
@@ -58,25 +55,28 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Rate limiting: {'enabled' if settings.rate_limit_enabled else 'disabled'}")
+    logger.info(
+        f"Rate limiting: {'enabled' if settings.rate_limit_enabled else 'disabled'}"
+    )
 
     # Initialize Default Org & Superadmin
     from db.database import AsyncSessionLocal
     from rbac.initialization import initialize_default_org
-    
+
     async with AsyncSessionLocal() as session:
         await initialize_default_org(session)
 
     # Start Config Polling
     from management.config_manager import config_manager
+
     await config_manager.initialize()
-    
-    # Sync dependent services
-    from guardrail.config import guardrail_settings
-    guardrail_settings.refresh_from_main_settings()
-    
+
+    # Sync dependent services (moved to microservices)
+    # from guardrail.config import guardrail_settings
+    # guardrail_settings.refresh_from_main_settings()
+
     config_manager.start_polling()
-    
+
     yield
     # Shutdown
     logger.info(f"Shutting down {settings.app_name}")
@@ -124,26 +124,28 @@ app.middleware("http")(auth_middleware)
 
 # ==================== Exception Handlers ====================
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     request_id = getattr(request.state, "request_id", "unknown")
-    
+
     error_response = ErrorResponse(
         error="internal_server_error",
         message="An unexpected error occurred",
-        request_id=request_id
+        request_id=request_id,
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=jsonable_encoder(error_response)
+        content=jsonable_encoder(error_response),
     )
 
 
 # ==================== Routes ====================
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -153,7 +155,7 @@ async def root():
         "version": settings.app_version,
         "environment": settings.environment,
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -166,19 +168,19 @@ async def health_check():
         components={
             "rbac": "healthy",
             "rate_limiter": "healthy",
-        }
+        },
     )
     return JSONResponse(content=jsonable_encoder(response))
 
 
 # Include routers
-from data.router import router as data_router
+# from data.router import router as data_router
 from audit.router import router as audit_router
 
 app.include_router(auth_router)
 app.include_router(audit_router)
 app.include_router(management_router)
-app.include_router(data_router)
+# app.include_router(data_router)
 app.include_router(gateway_router)
 app.include_router(roles_router)
 app.include_router(users_router)
@@ -188,11 +190,11 @@ app.include_router(users_router)
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app:app",
         host=settings.host,
         port=settings.port,
         reload=settings.reload,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

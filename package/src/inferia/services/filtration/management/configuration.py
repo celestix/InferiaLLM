@@ -149,39 +149,41 @@ async def update_provider_config(
     # Refresh data engine client if vectordb config was updated
     if wrapper.providers.vectordb:
         try:
+            pass
             # Run potentially blocking initialization in a separate thread
-            from data.engine import data_engine
-            from fastapi import BackgroundTasks
+            # from data.engine import data_engine
+            # from fastapi import BackgroundTasks
 
             # If we have BackgroundTasks in context, use them (not available here in endpoint signature)
             # So we use asyncio.create_task with to_thread to make it non-blocking
             # But we need to ensure it doesn't fail silently.
 
-            async def refresh_chroma():
-                try:
-                    await asyncio.to_thread(data_engine.initialize_client)
-                except Exception as e:
-                    logger.error("Background Chroma refresh failed: %s", e)
+            # async def refresh_chroma():
+            #     try:
+            #         await asyncio.to_thread(data_engine.initialize_client)
+            #     except Exception as e:
+            #         logger.error("Background Chroma refresh failed: %s", e)
 
-            asyncio.create_task(refresh_chroma())
+            # asyncio.create_task(refresh_chroma())
 
         except Exception as e:
             logger.error("Failed to trigger data engine refresh: %s", e)
 
     if wrapper.providers.guardrails:
         try:
+            pass
             # Also wrap guardrail refresh
-            from guardrail.config import guardrail_settings
+            # from guardrail.config import guardrail_settings
 
-            async def refresh_guardrails():
-                try:
-                    await asyncio.to_thread(
-                        guardrail_settings.refresh_from_main_settings
-                    )
-                except Exception as e:
-                    logger.error("Background Guardrail refresh failed: %s", e)
+            # async def refresh_guardrails():
+            #     try:
+            #         await asyncio.to_thread(
+            #             guardrail_settings.refresh_from_main_settings
+            #         )
+            #     except Exception as e:
+            #         logger.error("Background Guardrail refresh failed: %s", e)
 
-            asyncio.create_task(refresh_guardrails())
+            # asyncio.create_task(refresh_guardrails())
         except Exception as e:
             logger.error("Failed to trigger guardrail refresh: %s", e)
 

@@ -5,7 +5,7 @@ Handles RAG, vector lookups, context assembly, and logging.
 
 from typing import List, Dict, Any, Optional
 import chromadb
-from config import settings
+from inferia.services.data.service_config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -174,14 +174,14 @@ class DataEngine:
         documents: List[str],
         metadatas: List[Dict],
         ids: List[str],
-        org_id: str = None,
+        org_id: Optional[str] = None,
     ):
         """
         Add documents to a ChromaDB collection.
         Automatically chunks documents if they exceed limits.
         """
         try:
-            from .chunker import chunker
+            from inferia.services.data.chunker import chunker
         except ImportError:
             chunker = None
             logger.warning("Chunker not available, proceeding with whole documents")

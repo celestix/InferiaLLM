@@ -50,6 +50,50 @@ def run_filtration_gateway(queue=None):
             print(f"Error starting Filtration Gateway: {e}")
 
 
+def run_guardrail_service(queue=None):
+    from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
+    import uvicorn
+
+    try:
+        if queue:
+            queue.put(ServiceStarting("Guardrail Service"))
+
+        from inferia.services.guardrail.app import app
+
+        if queue:
+            queue.put(
+                ServiceStarted("Guardrail Service", detail="Listening on port 8002")
+            )
+
+        uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")
+    except Exception as e:
+        if queue:
+            queue.put(ServiceFailed("Guardrail Service", error=str(e)))
+        else:
+            print(f"Error starting Guardrail Service: {e}")
+
+
+def run_data_service(queue=None):
+    from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
+    import uvicorn
+
+    try:
+        if queue:
+            queue.put(ServiceStarting("Data Service"))
+
+        from inferia.services.data.app import app
+
+        if queue:
+            queue.put(ServiceStarted("Data Service", detail="Listening on port 8003"))
+
+        uvicorn.run(app, host="0.0.0.0", port=8003, log_level="info")
+    except Exception as e:
+        if queue:
+            queue.put(ServiceFailed("Data Service", error=str(e)))
+        else:
+            print(f"Error starting Data Service: {e}")
+
+
 def run_inference_gateway(queue=None):
     from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
 
@@ -297,7 +341,7 @@ def run_orchestration_stack():
 def run_all():
     # Run all services efficiently by spawning them as direct children
     queue = multiprocessing.Queue()
-    ui = StartupUI(queue, total=6)
+    ui = StartupUI(queue, total=8)
 
     processes = [
         # Orchestration Stack
@@ -314,6 +358,17 @@ def run_all():
         multiprocessing.Process(
             target=run_nosana_sidecar,
             name="nosana-sidecar",
+            args=(queue,),
+        ),
+        # Microservices
+        multiprocessing.Process(
+            target=run_guardrail_service,
+            name="guardrail",
+            args=(queue,),
+        ),
+        multiprocessing.Process(
+            target=run_data_service,
+            name="data",
             args=(queue,),
         ),
         # Inference & Filtration
@@ -383,7 +438,14 @@ def main(argv=None):
         "service",
         nargs="?",
         default="all",
-        choices=["all", "filtration", "inference", "orchestration"],
+        choices=[
+            "all",
+            "filtration",
+            "inference",
+            "orchestration",
+            "guardrail",
+            "data",
+        ],
         help="Service to start (default: all)",
     )
 
@@ -425,6 +487,12 @@ def main(argv=None):
                     show_orchestration_docs()
                 else:
                     run_orchestration_stack()
+
+            elif service == "guardrail":
+                run_guardrail_service()
+
+            elif service == "data":
+                run_data_service()
 
         elif cmd == "init":
             run_init()
