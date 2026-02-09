@@ -29,6 +29,16 @@ class Settings(BaseSettings):
         validation_alias="INTERNAL_API_KEY",
     )
 
+    # CORS Settings
+    # In production, set ALLOWED_ORIGINS to specific domains (comma-separated)
+    # Example: "https://app.inferia.ai,https://admin.inferia.ai"
+    # Default is restrictive - only allow localhost origins
+    allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:5173,http://localhost:8001",
+        alias="ALLOWED_ORIGINS",
+        validation_alias="ALLOWED_ORIGINS",
+    )
+
     # Timeouts
     request_timeout: int = 30
 
