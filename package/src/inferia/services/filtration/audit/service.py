@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc
 from inferia.services.filtration.db.models import AuditLog
-from inferia.services.filtration.audit.api_models import AuditLogFilter, AuditLogCreate
+from inferia.services.filtration.models import AuditLogFilter, AuditLogCreate
 
 def utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)

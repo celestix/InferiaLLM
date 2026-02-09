@@ -10,6 +10,10 @@ from .schemas.auth import (
     UserInfoResponse,
     TOTPSetupResponse,
     TOTPVerifyRequest,
+    RoleCreate,
+    RoleUpdate,
+    RoleResponse,
+    PermissionResponse,
 )
 from .schemas.inference import (
     Message,
@@ -43,5 +47,11 @@ from .schemas.prompt import (
     PromptTemplateCreate,
     PromptTemplateResponse,
 )
-from .schemas.logging import InferenceLogCreate, InferenceLogResponse
+from .schemas.logging import (
+    InferenceLogCreate,
+    InferenceLogResponse,
+    AuditLogCreate,
+    AuditLogResponse,
+    AuditLogFilter,
+)
 from .schemas.knowledge_base import KBFileResponse

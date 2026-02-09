@@ -51,7 +51,7 @@ async def create_api_key(
 
     # Log API Key creation
     from inferia.services.filtration.audit.service import audit_service
-    from inferia.services.filtration.audit.api_models import AuditLogCreate
+    from inferia.services.filtration.models import AuditLogCreate
 
     await audit_service.log_event(
         db,
@@ -136,7 +136,7 @@ async def revoke_api_key(
 
     # Log revocation
     from inferia.services.filtration.audit.service import audit_service
-    from inferia.services.filtration.audit.api_models import AuditLogCreate
+    from inferia.services.filtration.models import AuditLogCreate
 
     await audit_service.log_event(
         db,

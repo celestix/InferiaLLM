@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 from inferia.services.filtration.audit.service import audit_service
-from inferia.services.filtration.audit.api_models import AuditLogCreate
+from inferia.services.filtration.models import AuditLogCreate
 
 import cachetools
 from inferia.services.filtration.db.models import Usage as DBUsage

@@ -5,8 +5,13 @@ from typing import List
 
 from inferia.services.filtration.db.database import get_db
 from inferia.services.filtration.db.models import Role
-from inferia.services.filtration.models import PermissionEnum
-from .api_models import RoleCreate, RoleUpdate, RoleResponse, PermissionResponse
+from inferia.services.filtration.models import (
+    PermissionEnum,
+    RoleCreate,
+    RoleUpdate,
+    RoleResponse,
+    PermissionResponse,
+)
 from .middleware import get_current_user_from_request
 from .authorization import authz_service
 

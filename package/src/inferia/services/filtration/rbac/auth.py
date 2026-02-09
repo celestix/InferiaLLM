@@ -10,7 +10,7 @@ from inferia.services.filtration.config import settings
 from inferia.services.filtration.models import AuthToken, TokenPayload, LoginRequest, OrganizationBasicInfo
 from inferia.services.filtration.db.models import User as DBUser, UserOrganization, Organization
 from inferia.services.filtration.audit.service import audit_service
-from inferia.services.filtration.audit.api_models import AuditLogCreate
+from inferia.services.filtration.models import AuditLogCreate
 
 def utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)

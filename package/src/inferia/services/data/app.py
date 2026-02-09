@@ -78,10 +78,7 @@ class IngestRequest(BaseModel):
     org_id: Optional[str] = None
 
 
-class ProcessRequest(BaseModel):
-    template_id: Optional[str] = None
-    template_content: Optional[str] = None
-    variables: Optional[Dict[str, Any]] = None
+from inferia.common.schemas.prompt import PromptProcessRequest
 
 
 class TokenCheckRequest(BaseModel):
@@ -254,18 +251,18 @@ async def ingest(request: IngestRequest):
 
 
 @app.post("/process")
-async def process(request: ProcessRequest):
+async def process(request: PromptProcessRequest):
     """
     Process a prompt template.
     """
     try:
         if request.template_content:
             result = prompt_engine.process_prompt_from_content(
-                content=request.template_content, variables=request.variables
+                content=request.template_content, variables=request.template_vars
             )
         else:
             result = prompt_engine.process_prompt(
-                template_id=request.template_id, variables=request.variables
+                template_id=request.template_id, variables=request.template_vars
             )
         return {"content": result}
     except Exception as e:
