@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 
-from db.database import get_db
-from db.models import Policy as DBPolicy
-from schemas.prompt import PromptTemplateCreate, PromptTemplateResponse
-from schemas.auth import PermissionEnum
-from management.dependencies import get_current_user_context
-from rbac.authorization import authz_service
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import Policy as DBPolicy
+from inferia.services.filtration.schemas.prompt import PromptTemplateCreate, PromptTemplateResponse
+from inferia.services.filtration.schemas.auth import PermissionEnum
+from inferia.services.filtration.management.dependencies import get_current_user_context
+from inferia.services.filtration.rbac.authorization import authz_service
 
 router = APIRouter(tags=["Prompt Templates"])
 
@@ -46,8 +46,8 @@ async def create_template(
     await db.refresh(new_policy)
 
     # Log to audit service
-    from audit.service import audit_service
-    from audit.api_models import AuditLogCreate
+    from inferia.services.filtration.audit.service import audit_service
+    from inferia.services.filtration.audit.api_models import AuditLogCreate
 
     await audit_service.log_event(
         db,
@@ -148,8 +148,8 @@ async def delete_template(
     await db.commit()
 
     # Log deletion
-    from audit.service import audit_service
-    from audit.api_models import AuditLogCreate
+    from inferia.services.filtration.audit.service import audit_service
+    from inferia.services.filtration.audit.api_models import AuditLogCreate
 
     await audit_service.log_event(
         db,

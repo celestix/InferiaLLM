@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, func
 from ..database import Base
-from db.security import EncryptedJSON
+from inferia.services.filtration.db.security import EncryptedJSON
 
 class SystemSetting(Base):
     __tablename__ = "system_settings"

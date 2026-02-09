@@ -30,8 +30,8 @@ ORG_ID_MOCK = "org-123" # In real integration tests we need to setup DB state.
 # Or we can write a script that purely interacts with the DB directly to insert policy and then call API?
 # Accessing DB directly from script is possible if we import models.
 
-from db.models import Policy as DBPolicy, Deployment as DBDeployment, User as DBUser, ApiKey as DBApiKey
-from rbac.auth import auth_service
+from inferia.services.filtration.db.models import Policy as DBPolicy, Deployment as DBDeployment, User as DBUser, ApiKey as DBApiKey
+from inferia.services.filtration.rbac.auth import auth_service
 from sqlalchemy.future import select
 
 async def verify_linking():

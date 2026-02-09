@@ -1,7 +1,7 @@
 import pytest
-from audit.api_models import AuditLogCreate
+from inferia.services.filtration.audit.api_models import AuditLogCreate
 
-from audit.api_models import AuditLogCreate
+from inferia.services.filtration.audit.api_models import AuditLogCreate
 from unittest.mock import patch, AsyncMock
 from datetime import datetime
 import uuid

@@ -1,12 +1,12 @@
 """
-HTTP client for communicating with Filtration Gateway.
+HTTP client for communicating with Filtration Service.
 """
 
 import logging
 from typing import Any, Dict, List, Optional
 
 import httpx
-from config import settings
+from inferia.services.inference.config import settings
 from fastapi import HTTPException
 from fastapi import status as http_status
 
@@ -24,6 +24,7 @@ class FiltrationGatewayClient:
         # Local in-memory cache for resolved contexts to reduce network hops
         # TTL = 10s (Reduced from 60s for faster settings propagation)
         import cachetools
+
         self.context_cache = cachetools.TTLCache(maxsize=1000, ttl=10)
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -32,7 +33,9 @@ class FiltrationGatewayClient:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 timeout=self.timeout,
-                limits=httpx.Limits(max_keepalive_connections=100, max_connections=1000),
+                limits=httpx.Limits(
+                    max_keepalive_connections=100, max_connections=1000
+                ),
             )
         return self._client
 
@@ -41,7 +44,7 @@ class FiltrationGatewayClient:
         if self._client:
             await self._client.aclose()
             self._client = None
-            
+
     # ... (skipping methods)
 
     def _get_headers(self, auth_token: Optional[str] = None) -> Dict[str, str]:
@@ -121,7 +124,7 @@ class FiltrationGatewayClient:
         # Define the task function
         async def _send_log():
             try:
-                # Need to use the client carefully here. 
+                # Need to use the client carefully here.
                 # Since FiltrationGatewayClient manages a shared client, it should be fine.
                 await client.post(
                     "/internal/logs/create",
@@ -148,6 +151,7 @@ class FiltrationGatewayClient:
 
         # Fire and forget
         import asyncio
+
         asyncio.create_task(_send_log())
 
     async def login(self, username: str, password: str) -> Dict[str, Any]:
@@ -284,11 +288,11 @@ class FiltrationGatewayClient:
             )
             response.raise_for_status()
             data = response.json()
-            
+
             # Cache success checks
             if data.get("valid"):
                 self.context_cache[cache_key] = data
-                
+
             return data
         except httpx.HTTPStatusError as e:
             raise HTTPException(

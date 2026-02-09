@@ -9,7 +9,7 @@ from fastapi import HTTPException, status, Request
 from datetime import datetime, timedelta
 import asyncio
 
-from config import settings
+from inferia.services.filtration.config import settings
 
 try:
     import redis

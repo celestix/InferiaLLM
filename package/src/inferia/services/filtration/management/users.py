@@ -3,13 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 
-from db.database import get_db
-from db.models import User as DBUser, UserOrganization
-from schemas.management import UserCreate, UserResponse
-from schemas.auth import PermissionEnum
-from management.dependencies import get_current_user_context
-from rbac.auth import auth_service
-from rbac.authorization import authz_service
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import User as DBUser, UserOrganization
+from inferia.services.filtration.schemas.management import UserCreate, UserResponse
+from inferia.services.filtration.schemas.auth import PermissionEnum
+from inferia.services.filtration.management.dependencies import get_current_user_context
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.rbac.authorization import authz_service
 
 router = APIRouter(tags=["Users"])
 

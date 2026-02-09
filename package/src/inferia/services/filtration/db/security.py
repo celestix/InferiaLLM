@@ -3,7 +3,7 @@ import json
 from cryptography.fernet import Fernet
 from typing import Any, Dict, Optional
 from sqlalchemy.types import TypeDecorator, Text, JSON
-from config import settings
+from inferia.services.filtration.config import settings
 
 # The encryption key should be a 32-byte base64 encoded string
 # Users can generate one using: Fernet.generate_key().decode()

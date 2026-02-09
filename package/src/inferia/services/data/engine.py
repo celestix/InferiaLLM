@@ -5,7 +5,7 @@ Handles RAG, vector lookups, context assembly, and logging.
 
 from typing import List, Dict, Any, Optional
 import chromadb
-from inferia.services.data.service_config import settings
+from inferia.services.data.config import settings
 import logging
 
 logger = logging.getLogger(__name__)

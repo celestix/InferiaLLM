@@ -1,10 +1,10 @@
 import logging
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import Organization, User, UserOrganization, Role
-from config import settings
-from rbac.auth import auth_service
-from schemas.auth import PermissionEnum
+from inferia.services.filtration.db.models import Organization, User, UserOrganization, Role
+from inferia.services.filtration.config import settings
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.schemas.auth import PermissionEnum
 
 logger = logging.getLogger(__name__)
 

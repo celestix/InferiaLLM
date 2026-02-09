@@ -3,10 +3,10 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from db.database import get_db
-from db.models import User, Role, UserOrganization
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import User, Role, UserOrganization
 
-from models import (
+from inferia.services.filtration.models import (
     UserResponse as PydanticUserResponse,
     PermissionEnum,
 )  # existing in models.py

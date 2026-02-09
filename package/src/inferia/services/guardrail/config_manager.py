@@ -3,7 +3,7 @@ import logging
 import httpx
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
-from inferia.services.guardrail.service_config import guardrail_settings
+from inferia.services.guardrail.config import guardrail_settings
 
 logger = logging.getLogger(__name__)
 

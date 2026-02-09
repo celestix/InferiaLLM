@@ -1,5 +1,5 @@
 """
-Orchestration Gateway - Main Entry Point
+Orchestration Service - Main Entry Point
 
 This is the main entry point for the orchestration layer that includes:
 - REST API for deployment management
@@ -8,31 +8,34 @@ This is the main entry point for the orchestration layer that includes:
 """
 
 import asyncio
+import logging
 from pathlib import Path
 import sys
 
-# Add services to path so we can import from them
-services_path = Path(__file__).parent.parent.parent / "services" / "orchestration" / "app"
-sys.path.insert(0, str(services_path))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("orchestration-service")
+
+# Add orchestration app to path so internal imports work
+orchestration_app_path = str(Path(__file__).parent / "app")
+if orchestration_app_path not in sys.path:
+    sys.path.insert(0, orchestration_app_path)
 
 import asyncpg
 import grpc
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from inferia.gateways.orchestration_gateway.config import settings
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("orchestration-gateway")
+from inferia.services.orchestration.config import settings
 
-# Import from services
+# Import from internal app structure (now supported via sys.path)
 from services.inventory_manager.http import router as inventory_router
-from services.model_deployment.deployment_server import router as deployment_engine_router
+from services.model_deployment.deployment_server import (
+    router as deployment_engine_router,
+)
 
 from v1 import (
     compute_pool_pb2_grpc,
@@ -66,7 +69,7 @@ async def create_db_pool():
 
 async def serve():
     """Main server entry point - starts both HTTP and gRPC servers."""
-    
+
     # Create gRPC server
     server = grpc.aio.server(
         options=[
@@ -95,7 +98,6 @@ async def serve():
         description="Orchestration Gateway - Compute Pool and Model Deployment Management",
     )
 
-    
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -103,11 +105,11 @@ async def serve():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Include routers
     app.include_router(inventory_router)
     app.include_router(deployment_engine_router)
-    
+
     # Share pool with routes
     app.state.pool = db_pool
 
@@ -119,6 +121,7 @@ async def serve():
             "service": settings.app_name,
             "version": settings.app_version,
         }
+
     # Note: Dashboard now runs on its own port (3001) via the CLI
 
     # ---------------- gRPC Services ----------------
@@ -129,7 +132,7 @@ async def serve():
             model_registry_repo=model_registry_repo,
             deployment_repo=model_deployment_repo,
             outbox_repo=outbox_repo,
-            event_bus=event_bus
+            event_bus=event_bus,
         )
     )
 
@@ -145,18 +148,17 @@ async def serve():
     )
 
     # ---------------- Start Servers ----------------
-    
+
     # Start uvicorn (HTTP)
     config = uvicorn.Config(
-        app,
-        host=settings.host,
-        port=settings.http_port,
-        log_level="info"
+        app, host=settings.host, port=settings.http_port, log_level="info"
     )
     http_server = uvicorn.Server(config)
     asyncio.create_task(http_server.serve())
     logger.info(f"HTTP server started on port {settings.http_port}")
-    logger.info(f"Dashboard available at http://{settings.host}:{settings.http_port}/dashboard")
+    logger.info(
+        f"Dashboard available at http://{settings.host}:{settings.http_port}/dashboard"
+    )
 
     # Start gRPC
     server.add_insecure_port(f"[::]:{settings.grpc_port}")

@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Dict, List
 
-from client import filtration_client
+from inferia.services.inference.client import filtration_client
 from fastapi import BackgroundTasks, HTTPException
 from fastapi.responses import StreamingResponse
 

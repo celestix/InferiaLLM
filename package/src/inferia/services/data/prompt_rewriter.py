@@ -6,7 +6,7 @@ Handles rewriting prompts for clarity, safety, or style using an LLM.
 import logging
 import asyncio
 from typing import Optional, Any
-from inferia.services.data.service_config import settings
+from inferia.services.data.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class PromptRewriter:
 
         logger.info(f"Rewriting prompt with goal: {goal}")
 
-        from inferia.services.data.service_config import settings
+        from inferia.services.data.config import settings
         import httpx
 
         if settings.openai_api_key:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import (
+from inferia.services.filtration.models import (
     AuthToken,
     LoginRequest,
     UserInfoResponse,
@@ -13,18 +13,18 @@ from models import (
     TOTPSetupResponse,
     TOTPVerifyRequest,
 )
-from rbac.auth import auth_service
-from rbac.middleware import get_current_user_from_request
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.rbac.middleware import get_current_user_from_request
 
 # from rbac.authorization import authz_service # Temporarily disabled or needs refactor
-from db.database import get_db
-from db.models import (
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import (
     User as DBUser,
     Organization as DBOrganization,
     Invitation as DBInvitation,
     UserOrganization,
 )
-from models import OrganizationBasicInfo, SwitchOrgRequest
+from inferia.services.filtration.models import OrganizationBasicInfo, SwitchOrgRequest
 from sqlalchemy.future import select
 import uuid
 import secrets
@@ -40,7 +40,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from common.rate_limit import login_rate_limiter, register_rate_limiter
+from inferia.common.rate_limit import login_rate_limiter, register_rate_limiter
 
 
 def utcnow_naive():

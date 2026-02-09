@@ -10,7 +10,7 @@ except ImportError:
 
 from inferia.services.guardrail.providers.base import GuardrailProvider
 from inferia.services.guardrail.models import GuardrailResult, Violation, ViolationType
-from inferia.services.guardrail.service_config import guardrail_settings
+from inferia.services.guardrail.config import guardrail_settings
 
 logger = logging.getLogger(__name__)
 

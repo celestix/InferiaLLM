@@ -4,7 +4,7 @@ Guardrail module for LLM safety checks.
 
 from .engine import guardrail_engine
 from .models import GuardrailResult, Violation, ViolationType
-from .service_config import guardrail_settings
+from .config import guardrail_settings
 
 __all__ = [
     "guardrail_engine",

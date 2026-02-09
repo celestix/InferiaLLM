@@ -5,7 +5,7 @@ from llm_guard.vault import Vault
 from llm_guard.input_scanners import Anonymize
 from llm_guard import scan_prompt
 
-from inferia.services.guardrail.service_config import guardrail_settings
+from inferia.services.guardrail.config import guardrail_settings
 from inferia.services.guardrail.models import Violation, ViolationType
 
 logger = logging.getLogger(__name__)

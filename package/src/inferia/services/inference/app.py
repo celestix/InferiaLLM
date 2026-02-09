@@ -1,6 +1,6 @@
 """
-Inference Gateway - Client-Facing API
-Proxies requests to the Filtration Gateway for security and policy enforcement,
+Inference Service - Client-Facing API
+Proxies requests to the Filtration service for security and policy enforcement,
 then routes to the actual model provider.
 """
 
@@ -11,12 +11,12 @@ import time
 from typing import AsyncGenerator, Dict, Optional
 
 import httpx
-from client import filtration_client
-from config import settings
-from core.http_client import http_client
-from core.orchestrator import OrchestrationService
-from core.rate_limiter import rate_limiter
-from core.service import GatewayService
+from inferia.services.inference.client import filtration_client
+from inferia.services.inference.config import settings
+from inferia.services.inference.core.http_client import http_client
+from inferia.services.inference.core.orchestrator import OrchestrationService
+from inferia.services.inference.core.rate_limiter import rate_limiter
+from inferia.services.inference.core.service import GatewayService
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse

@@ -1,8 +1,5 @@
 """
-Orchestration Gateway Configuration
-
-Settings loaded from environment variables with sensible defaults.
-Updated to use Pydantic Settings and load from ~/.inferia/config.json
+Orchestration Service Configuration
 """
 
 import os
@@ -15,7 +12,7 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # App info
-    app_name: str = "Orchestration Gateway"
+    app_name: str = "Orchestration Service"
     app_version: str = "1.0.0"
     environment: str = Field(default="development", validation_alias="ENVIRONMENT")
 

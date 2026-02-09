@@ -98,9 +98,7 @@ class Settings(BaseSettings):
     internal_api_key: str = Field(
         default=None, min_length=32, validation_alias="INTERNAL_API_KEY"
     )
-    allowed_origins: str = (
-        "http://localhost:8001,http://localhost:5173"  # Comma-separated list
-    )
+    allowed_origins: str = "http://localhost:3001,http://localhost:8001,http://localhost:5173"  # Comma-separated list
 
     # RBAC Settings
     jwt_secret_key: str = Field(

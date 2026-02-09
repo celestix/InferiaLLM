@@ -3,9 +3,9 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from db.database import get_db
-from db.models import Role
-from models import PermissionEnum
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import Role
+from inferia.services.filtration.models import PermissionEnum
 from .api_models import RoleCreate, RoleUpdate, RoleResponse, PermissionResponse
 from .middleware import get_current_user_from_request
 from .authorization import authz_service

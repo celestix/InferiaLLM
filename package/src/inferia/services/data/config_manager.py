@@ -2,7 +2,7 @@ import asyncio
 import logging
 import httpx
 from typing import Dict, Any, Optional
-from inferia.services.data.service_config import settings
+from inferia.services.data.config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 """
-Filtration Gateway Application Entry Point.
+Filtration Service Application Entry Point.
 
 This is the main entry point for the filtration layer that includes:
 - API Gateway functionality
@@ -8,23 +8,31 @@ This is the main entry point for the filtration layer that includes:
 - Request routing to orchestration layer
 """
 
-import sys
-from pathlib import Path
-
-# Add services to path so we can import from them
-# In package: gateways/filtration_gateway -> ../../services/filtration
-services_path = Path(__file__).parent.parent.parent / "services" / "filtration"
-sys.path.insert(0, str(services_path))
-
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from contextlib import asynccontextmanager
 import logging
-from datetime import datetime
+import sys
 
-from config import settings
+from inferia.services.filtration.config import settings
+from inferia.services.filtration.models import HealthCheckResponse, ErrorResponse
+from inferia.services.filtration.gateway.middleware import (
+    RequestIDMiddleware,
+    StandardHeadersMiddleware,
+    ProcessingTimeMiddleware,
+)
+from inferia.services.filtration.gateway.internal_middleware import (
+    internal_api_key_middleware,
+)
+from inferia.services.filtration.rbac.middleware import auth_middleware
+from inferia.services.filtration.rbac.router import router as auth_router
+from inferia.services.filtration.gateway.router import router as gateway_router
+from inferia.services.filtration.management.router import router as management_router
+from inferia.services.filtration.rbac.roles_router import router as roles_router
+from inferia.services.filtration.rbac.users_router import router as users_router
+from inferia.services.filtration.audit.router import router as audit_router
 
 # Configure logging
 logging.basicConfig(
@@ -33,20 +41,6 @@ logging.basicConfig(
     handlers=[logging.FileHandler("debug.log"), logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
-
-from models import HealthCheckResponse, ErrorResponse
-from gateway.middleware import (
-    RequestIDMiddleware,
-    StandardHeadersMiddleware,
-    ProcessingTimeMiddleware,
-)
-from gateway.internal_middleware import internal_api_key_middleware
-from rbac.middleware import auth_middleware
-from rbac.router import router as auth_router
-from gateway.router import router as gateway_router
-from management.router import router as management_router
-from rbac.roles_router import router as roles_router
-from rbac.users_router import router as users_router
 
 
 @asynccontextmanager
@@ -60,21 +54,16 @@ async def lifespan(app: FastAPI):
     )
 
     # Initialize Default Org & Superadmin
-    from db.database import AsyncSessionLocal
-    from rbac.initialization import initialize_default_org
+    from inferia.services.filtration.db.database import AsyncSessionLocal
+    from inferia.services.filtration.rbac.initialization import initialize_default_org
 
     async with AsyncSessionLocal() as session:
         await initialize_default_org(session)
 
     # Start Config Polling
-    from management.config_manager import config_manager
+    from inferia.services.filtration.management.config_manager import config_manager
 
     await config_manager.initialize()
-
-    # Sync dependent services (moved to microservices)
-    # from guardrail.config import guardrail_settings
-    # guardrail_settings.refresh_from_main_settings()
-
     config_manager.start_polling()
 
     yield
@@ -174,19 +163,13 @@ async def health_check():
 
 
 # Include routers
-# from data.router import router as data_router
-from audit.router import router as audit_router
-
 app.include_router(auth_router)
 app.include_router(audit_router)
 app.include_router(management_router)
-# app.include_router(data_router)
 app.include_router(gateway_router)
 app.include_router(roles_router)
 app.include_router(users_router)
 
-
-# ==================== Run Application ====================
 
 if __name__ == "__main__":
     import uvicorn

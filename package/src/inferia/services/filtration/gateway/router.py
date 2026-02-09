@@ -5,7 +5,7 @@ Handles request routing to the orchestration layer.
 
 from typing import Any, Dict, List
 
-from db.database import get_db
+from inferia.services.filtration.db.database import get_db
 from fastapi import (
     APIRouter,
     Depends,
@@ -16,19 +16,21 @@ from fastapi import (
     BackgroundTasks,
     Query,
 )
-from guardrail.api_models import GuardrailScanRequest, ScanType
-
-# from guardrail.engine import guardrail_engine # Moved to microservice
-# from guardrail.pii_service import pii_service # Moved to microservice
-from models import InferenceRequest, InferenceResponse, ModelInfo, ModelsListResponse
-from rbac import router as auth_router
+from inferia.services.guardrail.api_models import GuardrailScanRequest, ScanType
+from inferia.services.filtration.models import (
+    InferenceRequest,
+    InferenceResponse,
+    ModelInfo,
+    ModelsListResponse,
+)
+from inferia.services.filtration.rbac.router import router as auth_router
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from db.models import Deployment
+from inferia.services.filtration.db.models import Deployment
 
-from gateway.rate_limiter import rate_limiter
-from security.encryption import LogEncryption
-from config import settings
+from inferia.services.filtration.gateway.rate_limiter import rate_limiter
+from inferia.services.filtration.security.encryption import LogEncryption
+from inferia.services.filtration.config import settings
 import httpx
 
 
@@ -47,11 +49,11 @@ if settings.log_encryption_key:
         )
 
 router = APIRouter(prefix="/internal", tags=["Internal Inference"])
-router.include_router(auth_router.router)
+router.include_router(auth_router)
 
 
 # --- Policy Engine: Internal Endpoints ---
-from policy.engine import policy_engine
+from inferia.services.filtration.policy.engine import policy_engine
 from pydantic import BaseModel
 
 
@@ -108,8 +110,8 @@ async def track_user_usage(
 # --- Inference Logging ---
 import uuid
 
-from db.models import InferenceLog
-from models import InferenceLogCreate
+from inferia.services.filtration.db.models import InferenceLog
+from inferia.services.filtration.models import InferenceLogCreate
 
 
 async def _persist_log_background(
@@ -259,7 +261,7 @@ async def list_models(
 
 
 # NEW: Context Resolution for Inference Gateway
-from db.database import get_db
+from inferia.services.filtration.db.database import get_db
 from fastapi import Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -326,7 +328,11 @@ async def resolve_inference_context(
 
 
 # --- Prompt Engine Integration ---
-from models import Message, PromptProcessRequest, PromptProcessResponse
+from inferia.services.filtration.models import (
+    Message,
+    PromptProcessRequest,
+    PromptProcessResponse,
+)
 
 
 @router.post("/prompt/process", response_model=PromptProcessResponse)

@@ -2,10 +2,10 @@ import asyncio
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
-from db.database import DATABASE_URL, Base
+from inferia.services.filtration.db.database import DATABASE_URL, Base
 
 # Import all models explicitly to ensure they are registered with SQLAlchemy
-from db.models import (
+from inferia.services.filtration.db.models import (
     Organization,
     User,
     Deployment,
@@ -19,7 +19,7 @@ from db.models import (
     AuditLog,
     SystemSetting,
 )
-from db.models.role import Role
+from inferia.services.filtration.db.models.role import Role
 
 logger = logging.getLogger(__name__)
 

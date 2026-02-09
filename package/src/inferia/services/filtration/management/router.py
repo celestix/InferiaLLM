@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
-from management.organizations import router as organizations_router
-from management.users import router as users_router
-from management.deployments import router as deployments_router
-from management.api_keys import router as api_keys_router
-from management.configuration import router as config_router
-from management.knowledge_base import router as kb_router
-from management.prompts import router as prompts_router
+from inferia.services.filtration.management.organizations import router as organizations_router
+from inferia.services.filtration.management.users import router as users_router
+from inferia.services.filtration.management.deployments import router as deployments_router
+from inferia.services.filtration.management.api_keys import router as api_keys_router
+from inferia.services.filtration.management.configuration import router as config_router
+from inferia.services.filtration.management.knowledge_base import router as kb_router
+from inferia.services.filtration.management.prompts import router as prompts_router
 
 router = APIRouter(prefix="/management")
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from schemas.inference import Message
+from inferia.services.filtration.schemas.inference import Message
 
 class PromptProcessRequest(BaseModel):
     messages: List[Message]

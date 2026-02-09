@@ -10,13 +10,13 @@ def utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-from db.database import get_db
-from db.models import ApiKey as DBApiKey
-from schemas.management import ApiKeyCreate, ApiKeyResponse, ApiKeyCreatedResponse
-from schemas.auth import PermissionEnum
-from management.dependencies import get_current_user_context
-from rbac.authorization import authz_service
-from rbac.auth import auth_service
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import ApiKey as DBApiKey
+from inferia.services.filtration.schemas.management import ApiKeyCreate, ApiKeyResponse, ApiKeyCreatedResponse
+from inferia.services.filtration.schemas.auth import PermissionEnum
+from inferia.services.filtration.management.dependencies import get_current_user_context
+from inferia.services.filtration.rbac.authorization import authz_service
+from inferia.services.filtration.rbac.auth import auth_service
 
 router = APIRouter(tags=["API Keys"])
 
@@ -50,8 +50,8 @@ async def create_api_key(
     await db.refresh(new_key)
 
     # Log API Key creation
-    from audit.service import audit_service
-    from audit.api_models import AuditLogCreate
+    from inferia.services.filtration.audit.service import audit_service
+    from inferia.services.filtration.audit.api_models import AuditLogCreate
 
     await audit_service.log_event(
         db,
@@ -135,8 +135,8 @@ async def revoke_api_key(
     await db.commit()
 
     # Log revocation
-    from audit.service import audit_service
-    from audit.api_models import AuditLogCreate
+    from inferia.services.filtration.audit.service import audit_service
+    from inferia.services.filtration.audit.api_models import AuditLogCreate
 
     await audit_service.log_event(
         db,

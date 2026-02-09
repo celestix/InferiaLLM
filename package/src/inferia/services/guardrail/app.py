@@ -1,59 +1,63 @@
+"""
+Guardrail Service - LLM Safety Scanning.
+"""
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import logging
-import sys
-from pathlib import Path
-import os
+from contextlib import asynccontextmanager
 
-# Add current directory to path so we can import engine using absolute imports
-sys.path.append(str(Path(__file__).parent))
-
+from inferia.services.guardrail.config import settings
 from inferia.services.guardrail.engine import guardrail_engine
-from inferia.services.guardrail.models import GuardrailResult, ScanType, Violation
+from inferia.services.guardrail.models import GuardrailResult, ScanType
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, settings.log_level),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger("guardrail-service")
-
-from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start polling config from Gateway
+    """Lifespan context manager for startup and shutdown events."""
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+
+    # Start polling config from Filtration Service
     from inferia.services.guardrail.config_manager import config_manager
-    from inferia.services.guardrail.service_config import guardrail_settings
 
     config_manager.start_polling(
-        gateway_url=guardrail_settings.filtration_url,
-        api_key=guardrail_settings.internal_api_key,
+        gateway_url=settings.filtration_url,
+        api_key=settings.internal_api_key,
     )
 
     yield
 
+    logger.info(f"Shutting down {settings.app_name}")
     config_manager.stop_polling()
 
 
-app = FastAPI(title="Guardrail Service", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="Guardrail Service - LLM Safety Scanning",
+    lifespan=lifespan,
+)
 
 # CORS configuration
-# Allow requests from dashboard and other known origins
-allowed_origins = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,http://localhost:8001",
-)
 _allow_origins = [
-    origin.strip() for origin in allowed_origins.split(",") if origin.strip()
+    origin.strip() for origin in settings.allowed_origins.split(",") if origin.strip()
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allow_origins,
+    allow_origins=_allow_origins if not settings.is_development else ["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -67,12 +71,28 @@ class ScanRequest(BaseModel):
     pii_entities: Optional[List[str]] = None
 
 
-@app.get("/health")
+@app.get("/", tags=["Root"])
+async def root():
+    """Root endpoint."""
+    return {
+        "service": settings.app_name,
+        "version": settings.app_version,
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health", tags=["Health"])
 async def health():
-    return {"status": "healthy", "service": "guardrail"}
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": settings.app_name,
+        "version": settings.app_version,
+    }
 
 
-@app.post("/scan", response_model=GuardrailResult)
+@app.post("/scan", response_model=GuardrailResult, tags=["Guardrail"])
 async def scan(request: ScanRequest):
     """
     Scan text for safety violations.
@@ -104,4 +124,10 @@ async def scan(request: ScanRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(
+        "app:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload,
+        log_level=settings.log_level.lower(),
+    )

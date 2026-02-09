@@ -5,9 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
-from config import settings, ProvidersConfig
-from db.models import SystemSetting
-from db.database import AsyncSessionLocal
+from inferia.services.filtration.config import settings, ProvidersConfig
+from inferia.services.filtration.db.models import SystemSetting
+from inferia.services.filtration.db.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 

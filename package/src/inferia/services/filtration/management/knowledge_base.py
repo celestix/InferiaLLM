@@ -6,14 +6,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from db.database import get_db
+from inferia.services.filtration.db.database import get_db
 
 import httpx
-from config import settings
-from schemas.knowledge_base import KBFileResponse
-from schemas.auth import PermissionEnum
-from management.dependencies import get_current_user_context
-from rbac.authorization import authz_service
+from inferia.services.filtration.config import settings
+from inferia.services.filtration.schemas.knowledge_base import KBFileResponse
+from inferia.services.filtration.schemas.auth import PermissionEnum
+from inferia.services.filtration.management.dependencies import get_current_user_context
+from inferia.services.filtration.rbac.authorization import authz_service
 
 router = APIRouter(tags=["Knowledge Base"])
 
@@ -70,8 +70,8 @@ async def upload_knowledge_document(
             doc_id = result.get("doc_id")
 
         # Log to audit service
-        from audit.service import audit_service
-        from audit.api_models import AuditLogCreate
+        from inferia.services.filtration.audit.service import audit_service
+        from inferia.services.filtration.audit.api_models import AuditLogCreate
 
         await audit_service.log_event(
             db,

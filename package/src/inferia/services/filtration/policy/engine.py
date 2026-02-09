@@ -1,13 +1,13 @@
 import logging
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
-from audit.service import audit_service
-from audit.api_models import AuditLogCreate
+from inferia.services.filtration.audit.service import audit_service
+from inferia.services.filtration.audit.api_models import AuditLogCreate
 
 import cachetools
-from db.models import Usage as DBUsage
+from inferia.services.filtration.db.models import Usage as DBUsage
 from fastapi import HTTPException, status
-from models import UserContext
+from inferia.services.filtration.models import UserContext
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,22 +19,22 @@ DEFAULT_DAILY_TOKEN_LIMIT = 100000
 
 from typing import Any
 
-from db.models import ApiKey as DBApiKey
-from db.models import Deployment as DBDeployment
-from db.models import Policy as DBPolicy
-from db.models import Organization as DBOrganization
-from rbac.auth import auth_service
+from inferia.services.filtration.db.models import ApiKey as DBApiKey
+from inferia.services.filtration.db.models import Deployment as DBDeployment
+from inferia.services.filtration.db.models import Policy as DBPolicy
+from inferia.services.filtration.db.models import Organization as DBOrganization
+from inferia.services.filtration.rbac.auth import auth_service
 
 
 import redis.asyncio as redis
-from config import settings
+from inferia.services.filtration.config import settings
 
 # Fix import path for common module
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from common.circuit_breaker import circuit_breaker, CircuitBreakerError
+from inferia.common.circuit_breaker import circuit_breaker, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 

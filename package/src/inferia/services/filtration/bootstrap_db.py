@@ -7,11 +7,11 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from db.database import DATABASE_URL, Base
+from inferia.services.filtration.db.database import DATABASE_URL, Base
 
 # Import all models to ensure they are registered with Base
 from db import models 
-from rbac.initialization import initialize_default_org
+from inferia.services.filtration.rbac.initialization import initialize_default_org
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

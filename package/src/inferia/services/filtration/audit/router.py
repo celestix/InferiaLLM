@@ -5,11 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from datetime import datetime
 
-from db.database import get_db
-from audit.service import audit_service
-from audit.api_models import AuditLogResponse, AuditLogFilter, AuditLogCreate
-from rbac.middleware import require_role
-from rbac.models import RoleType as Role
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.audit.service import audit_service
+from inferia.services.filtration.audit.api_models import AuditLogResponse, AuditLogFilter, AuditLogCreate
+from inferia.services.filtration.rbac.middleware import require_role
+from inferia.services.filtration.rbac.models import RoleType as Role
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 

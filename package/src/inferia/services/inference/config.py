@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # Example: "https://app.inferia.ai,https://admin.inferia.ai"
     # Default is restrictive - only allow localhost origins
     allowed_origins: str = Field(
-        default="http://localhost:3000,http://localhost:5173,http://localhost:8001",
+        default="http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8001",
         alias="ALLOWED_ORIGINS",
         validation_alias="ALLOWED_ORIGINS",
     )

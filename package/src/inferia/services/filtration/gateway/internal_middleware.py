@@ -3,7 +3,7 @@ Middleware for validating internal API key from service-to-service requests.
 """
 
 from fastapi import Request, HTTPException, status
-from config import settings
+from inferia.services.filtration.config import settings
 
 
 async def internal_api_key_middleware(request: Request, call_next):

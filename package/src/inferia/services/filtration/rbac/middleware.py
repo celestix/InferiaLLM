@@ -2,9 +2,9 @@ from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer
 from typing import Optional, List
 
-from models import UserContext, PermissionEnum
-from rbac.auth import auth_service
-from db.database import AsyncSessionLocal
+from inferia.services.filtration.models import UserContext, PermissionEnum
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.db.database import AsyncSessionLocal
 
 security = HTTPBearer()
 
@@ -59,7 +59,7 @@ async def auth_middleware(request: Request, call_next):
             
             # Determine permissions based on roles (Dynamic from DB)
             from sqlalchemy.future import select
-            from db.models import Role
+            from inferia.services.filtration.db.models import Role
             
             permissions_set = set()
             if roles:

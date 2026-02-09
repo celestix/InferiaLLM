@@ -3,20 +3,34 @@ Guardrail Service Configuration.
 """
 
 import logging
-from typing import List, Optional, Any
-from pathlib import Path
+from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
 
-class GuardrailSettings(BaseSettings):
-    """Settings for guardrail engine."""
+class Settings(BaseSettings):
+    """Guardrail Service Settings."""
 
-    app_name: str = "Guardrail Service"
+    # Application Settings
+    app_name: str = "InferiaLLM Guardrail Service"
+    app_version: str = "0.1.0"
+    environment: str = "development"
 
-    # Global
+    # Server Settings
+    host: str = "0.0.0.0"
+    port: int = 8002
+    reload: bool = False
+    log_level: str = "INFO"
+
+    # CORS Settings
+    allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8001",
+        validation_alias="ALLOWED_ORIGINS",
+    )
+
+    # Global Controls
     enable_guardrails: bool = True
 
     # Granular Controls
@@ -58,14 +72,24 @@ class GuardrailSettings(BaseSettings):
     )
     internal_api_key: str = Field(default="", validation_alias="INTERNAL_API_KEY")
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
-    )
+    @property
+    def is_development(self) -> bool:
+        return self.environment == "development"
 
     def get_banned_substrings_list(self) -> List[str]:
         if not self.banned_substrings:
             return []
         return [s.strip() for s in self.banned_substrings.split(",") if s.strip()]
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
-guardrail_settings = GuardrailSettings()
+
+settings = Settings()
+
+# Alias for backward compatibility
+guardrail_settings = settings
