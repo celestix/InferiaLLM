@@ -13,18 +13,18 @@ def utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-from db.database import get_db
-from db.models import Policy as DBPolicy, Usage as DBUsage, ApiKey as DBApiKey
-from schemas.config import ConfigUpdateRequest, ConfigResponse, UsageStatsResponse
-from management.dependencies import get_current_user_context
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import Policy as DBPolicy, Usage as DBUsage, ApiKey as DBApiKey
+from inferia.services.filtration.schemas.config import ConfigUpdateRequest, ConfigResponse, UsageStatsResponse
+from inferia.services.filtration.management.dependencies import get_current_user_context
 
 # New imports for local provider config
 from pydantic import BaseModel, Field
 from pathlib import Path
 import json
 import os
-from config import settings
-from config import (
+from inferia.services.filtration.config import settings
+from inferia.services.filtration.config import (
     ProvidersConfig,
     AWSConfig,
     ChromaConfig,
@@ -125,7 +125,7 @@ async def update_provider_config(
         )
 
     # 1. Update DB and Local Cache
-    from management.config_manager import config_manager
+    from inferia.services.filtration.management.config_manager import config_manager
 
     new_data = wrapper.providers.model_dump(exclude_unset=True)
 
@@ -146,44 +146,7 @@ async def update_provider_config(
         logger.error("Failed to write config: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to save config: {e}")
 
-    # Refresh data engine client if vectordb config was updated
-    if wrapper.providers.vectordb:
-        try:
-            # Run potentially blocking initialization in a separate thread
-            from data.engine import data_engine
-            from fastapi import BackgroundTasks
-
-            # If we have BackgroundTasks in context, use them (not available here in endpoint signature)
-            # So we use asyncio.create_task with to_thread to make it non-blocking
-            # But we need to ensure it doesn't fail silently.
-
-            async def refresh_chroma():
-                try:
-                    await asyncio.to_thread(data_engine.initialize_client)
-                except Exception as e:
-                    logger.error("Background Chroma refresh failed: %s", e)
-
-            asyncio.create_task(refresh_chroma())
-
-        except Exception as e:
-            logger.error("Failed to trigger data engine refresh: %s", e)
-
-    if wrapper.providers.guardrails:
-        try:
-            # Also wrap guardrail refresh
-            from guardrail.config import guardrail_settings
-
-            async def refresh_guardrails():
-                try:
-                    await asyncio.to_thread(
-                        guardrail_settings.refresh_from_main_settings
-                    )
-                except Exception as e:
-                    logger.error("Background Guardrail refresh failed: %s", e)
-
-            asyncio.create_task(refresh_guardrails())
-        except Exception as e:
-            logger.error("Failed to trigger guardrail refresh: %s", e)
+    # Data engine and guardrail refreshes are now handled by their respective microservices
 
     return {"status": "ok", "message": "Configuration saved to database"}
 
@@ -234,8 +197,8 @@ async def update_config(
     await db.refresh(policy)
 
     # Log to audit service
-    from audit.service import audit_service
-    from audit.api_models import AuditLogCreate
+    from inferia.services.filtration.audit.service import audit_service
+    from inferia.services.filtration.models import AuditLogCreate
 
     await audit_service.log_event(
         db,

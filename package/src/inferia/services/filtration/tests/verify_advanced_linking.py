@@ -1,11 +1,11 @@
 
 import asyncio
-from models import Message, PromptProcessRequest
-from gateway.router import process_prompt
+from inferia.services.filtration.models import Message, PromptProcessRequest
+from inferia.services.filtration.gateway.router import process_prompt
 import json
 
 # MOCK Prompt Engine to assume behavior
-from prompt.engine import prompt_engine
+from inferia.services.filtration.prompt.engine import prompt_engine
 # Monkey patch assemble_context
 async def mock_assemble_context(query, collection, top_k):
     if collection == "docs-v1":

@@ -4,13 +4,13 @@ from sqlalchemy.future import select
 import uuid
 import secrets
 
-from db.database import get_db
-from db.models import (
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import (
     Organization as DBOrganization,
     Invitation as DBInvitation,
     User as DBUser,
 )
-from schemas.management import (
+from inferia.services.filtration.schemas.management import (
     OrganizationCreate,
     OrganizationResponse,
     OrganizationUpdate,
@@ -18,9 +18,9 @@ from schemas.management import (
     InviteResponse,
     InvitationListResponse,
 )
-from management.dependencies import get_current_user_context
-from schemas.auth import PermissionEnum
-from rbac.authorization import authz_service
+from inferia.services.filtration.management.dependencies import get_current_user_context
+from inferia.services.filtration.schemas.auth import PermissionEnum
+from inferia.services.filtration.rbac.authorization import authz_service
 from datetime import datetime, timedelta, timezone
 
 
@@ -120,7 +120,7 @@ async def create_invitation(
 
     if existing_user:
         # Check membership
-        from db.models import UserOrganization
+        from inferia.services.filtration.db.models import UserOrganization
 
         membership = await db.execute(
             select(UserOrganization).where(

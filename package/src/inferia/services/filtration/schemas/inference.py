@@ -2,17 +2,11 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime, timezone
 from uuid import uuid4
+from inferia.common.schemas.chat import Message, Usage, Choice
 
 
 def utcnow_naive():
     return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
-class Message(BaseModel):
-    """Chat message."""
-
-    role: Literal["system", "user", "assistant"]
-    content: str
 
 
 class InferenceRequest(BaseModel):
@@ -48,22 +42,6 @@ class InferenceRequest(BaseModel):
         if not v:
             raise ValueError("messages cannot be empty")
         return v
-
-
-class Usage(BaseModel):
-    """Token usage information."""
-
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-
-
-class Choice(BaseModel):
-    """Completion choice."""
-
-    index: int
-    message: Message
-    finish_reason: Literal["stop", "length", "content_filter"]
 
 
 class InferenceResponse(BaseModel):

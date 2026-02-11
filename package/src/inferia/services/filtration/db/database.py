@@ -3,7 +3,7 @@ Database configuration and session management.
 Using SQLAlchemy with asyncpg.
 """
 
-from config import settings
+from inferia.services.filtration.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 

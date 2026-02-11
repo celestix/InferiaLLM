@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import (
+from inferia.services.filtration.models import (
     AuthToken,
     LoginRequest,
     UserInfoResponse,
@@ -13,18 +13,18 @@ from models import (
     TOTPSetupResponse,
     TOTPVerifyRequest,
 )
-from rbac.auth import auth_service
-from rbac.middleware import get_current_user_from_request
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.rbac.middleware import get_current_user_from_request
 
 # from rbac.authorization import authz_service # Temporarily disabled or needs refactor
-from db.database import get_db
-from db.models import (
+from inferia.services.filtration.db.database import get_db
+from inferia.services.filtration.db.models import (
     User as DBUser,
     Organization as DBOrganization,
     Invitation as DBInvitation,
     UserOrganization,
 )
-from models import OrganizationBasicInfo, SwitchOrgRequest
+from inferia.services.filtration.models import OrganizationBasicInfo, SwitchOrgRequest
 from sqlalchemy.future import select
 import uuid
 import secrets
@@ -34,6 +34,13 @@ import pyotp
 import qrcode
 import io
 import base64
+
+# Fix import path for common module
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from inferia.common.rate_limit import login_rate_limiter, register_rate_limiter
 
 
 def utcnow_naive():
@@ -46,12 +53,29 @@ security = HTTPBearer()
 
 
 @router.post("/login", response_model=AuthToken)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: LoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)
+):
     """
     Login endpoint to authenticate user and receive JWT tokens.
     Authentication against Postgres Database.
     Supports TOTP 2FA.
+    Rate limited: 5 attempts per minute.
     """
+    # Rate limiting check
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    forwarded = http_request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+
+    is_allowed, retry_after = login_rate_limiter.is_allowed(request.username, client_ip)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many login attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     # 1. Authenticate user credentials first
     user = await auth_service.authenticate_user(db, request.username, request.password)
 
@@ -101,11 +125,28 @@ async def register(reg_data: RegisterRequest, db: AsyncSession = Depends(get_db)
 
 @router.post("/register-invite", response_model=AuthToken)
 async def register_invite(
-    reg_data: RegisterInviteRequest, db: AsyncSession = Depends(get_db)
+    reg_data: RegisterInviteRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Register a new user via invitation.
+    Rate limited: 3 attempts per hour per IP.
     """
+    # Rate limiting check
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    forwarded = http_request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+
+    is_allowed, retry_after = register_rate_limiter.is_allowed("invite", client_ip)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many registration attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     # 1. Validate Invite
     invite_query = select(DBInvitation).where(DBInvitation.token == reg_data.token)
     invite_result = await db.execute(invite_query)
@@ -307,14 +348,23 @@ async def logout():
 
 
 @router.get("/organizations")
-async def list_organizations(request: Request, db: AsyncSession = Depends(get_db)):
-    """List organizations the current user belongs to."""
+async def list_organizations(
+    request: Request,
+    skip: int = Query(0, ge=0, description="Number of organizations to skip"),
+    limit: int = Query(
+        50, ge=1, le=100, description="Maximum number of organizations to return"
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """List organizations the current user belongs to with pagination."""
     user_context = get_current_user_from_request(request)
 
     stmt = (
         select(UserOrganization, DBOrganization)
         .join(DBOrganization, UserOrganization.org_id == DBOrganization.id)
         .where(UserOrganization.user_id == user_context.user_id)
+        .offset(skip)
+        .limit(limit)
     )
 
     result = await db.execute(stmt)

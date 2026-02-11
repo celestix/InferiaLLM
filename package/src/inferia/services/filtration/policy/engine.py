@@ -1,12 +1,13 @@
+import logging
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
-from audit.service import audit_service
-from audit.api_models import AuditLogCreate
+from inferia.services.filtration.audit.service import audit_service
+from inferia.services.filtration.models import AuditLogCreate
 
 import cachetools
-from db.models import Usage as DBUsage
+from inferia.services.filtration.db.models import Usage as DBUsage
 from fastapi import HTTPException, status
-from models import UserContext
+from inferia.services.filtration.models import UserContext
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,15 +19,26 @@ DEFAULT_DAILY_TOKEN_LIMIT = 100000
 
 from typing import Any
 
-from db.models import ApiKey as DBApiKey
-from db.models import Deployment as DBDeployment
-from db.models import Policy as DBPolicy
-from db.models import Organization as DBOrganization
-from rbac.auth import auth_service
+from inferia.services.filtration.db.models import ApiKey as DBApiKey
+from inferia.services.filtration.db.models import Deployment as DBDeployment
+from inferia.services.filtration.db.models import Policy as DBPolicy
+from inferia.services.filtration.db.models import Organization as DBOrganization
+from inferia.services.filtration.rbac.auth import auth_service
 
 
 import redis.asyncio as redis
-from config import settings
+from inferia.services.filtration.config import settings
+
+# Fix import path for common module
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from inferia.common.circuit_breaker import circuit_breaker, CircuitBreakerError
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyEngine:
@@ -109,6 +121,13 @@ class PolicyEngine:
             }
 
         deployment, organization = row
+
+        # 2.1 Validate Deployment State (Only allow active models for inference)
+        if deployment.state not in ["RUNNING", "READY", "ready"]:
+            return {
+                "valid": False,
+                "error": f"Model '{model}' is currently {deployment.state}. Please start the deployment first.",
+            }
 
         # Convert deployment to dict for caching and session independence
         deployment_dict = {
@@ -273,10 +292,11 @@ class PolicyEngine:
                     limit_requests = policy_config.get("request_limit", limit_requests)
                     limit_tokens = policy_config.get("token_limit", limit_tokens)
 
-        # 3. Check Redis Usage
+        # 3. Check Redis Usage with Circuit Breaker
         try:
-            current_requests = await self.redis.get(req_key)
-            current_tokens = await self.redis.get(tok_key)
+            current_requests, current_tokens = await self._check_redis_quota(
+                req_key, tok_key
+            )
 
             used_requests = int(current_requests) if current_requests else 0
             used_tokens = int(current_tokens) if current_tokens else 0
@@ -292,13 +312,28 @@ class PolicyEngine:
                     detail=f"Daily quota exceeded (Token Limit). Limit: {limit_tokens}. Used: {used_tokens}.",
                 )
 
-        except redis.RedisError:
-            # Open circuit on Redis fail? Or Fail Safe?
-            # Fail safe allows request if Redis is down (preferred for availability)
-            # Fail secure blocks request.
-            # We choose Fail Safe but log error.
-            print("Redis Quota Check Failed - Failing Open")
+        except CircuitBreakerError:
+            # Circuit breaker is open - Redis is down, fail open for availability
+            logger.warning(
+                "Redis circuit breaker is OPEN - allowing request (fail open)"
+            )
             pass
+        except redis.RedisError as e:
+            # Other Redis errors - log and fail open
+            logger.error(f"Redis Quota Check Failed - Failing Open: {e}")
+            pass
+
+    @circuit_breaker(
+        "redis_quota",
+        failure_threshold=3,
+        recovery_timeout=30.0,
+        expected_exception=redis.RedisError,
+    )
+    async def _check_redis_quota(self, req_key: str, tok_key: str) -> tuple:
+        """Check Redis quota with circuit breaker protection."""
+        current_requests = await self.redis.get(req_key)
+        current_tokens = await self.redis.get(tok_key)
+        return current_requests, current_tokens
 
     async def increment_usage(
         self, db: AsyncSession, user_id: str, model: str, usage_data: Dict[str, int]
@@ -315,7 +350,7 @@ class PolicyEngine:
     async def increment_redis_only(
         self, user_id: str, model: str, usage_data: Dict[str, int]
     ) -> None:
-        """Increment usage in Redis for real-time quota checks."""
+        """Increment usage in Redis for real-time quota checks with circuit breaker."""
         today_str = date.today().isoformat()
         total_incr = usage_data.get("total_tokens", 0)
 
@@ -323,14 +358,28 @@ class PolicyEngine:
         tok_key = f"usage:{user_id}:{today_str}:{model}:tokens"
 
         try:
-            async with self.redis.pipeline(transaction=True) as pipe:
-                await pipe.incr(req_key, amount=1)
-                await pipe.incrby(tok_key, amount=total_incr)
-                await pipe.expire(req_key, 172800)
-                await pipe.expire(tok_key, 172800)
-                await pipe.execute()
+            await self._increment_redis_with_breaker(req_key, tok_key, total_incr)
+        except CircuitBreakerError:
+            logger.warning("Redis circuit breaker is OPEN - skipping usage increment")
         except redis.RedisError as e:
-            print(f"Redis Usage Increment Failed: {e}")
+            logger.error(f"Redis Usage Increment Failed: {e}")
+
+    @circuit_breaker(
+        "redis_quota",
+        failure_threshold=3,
+        recovery_timeout=30.0,
+        expected_exception=redis.RedisError,
+    )
+    async def _increment_redis_with_breaker(
+        self, req_key: str, tok_key: str, total_incr: int
+    ) -> None:
+        """Increment Redis usage with circuit breaker protection."""
+        async with self.redis.pipeline(transaction=True) as pipe:
+            await pipe.incr(req_key, amount=1)
+            await pipe.incrby(tok_key, amount=total_incr)
+            await pipe.expire(req_key, 172800)
+            await pipe.expire(tok_key, 172800)
+            await pipe.execute()
 
     async def persist_usage_db(
         self, db: AsyncSession, user_id: str, model: str, usage_data: Dict[str, int]
@@ -366,7 +415,7 @@ class PolicyEngine:
             await db.execute(stmt)
             await db.commit()
         except Exception as e:
-            print(f"DB Usage Persist Failed: {e}")
+            logger.error(f"DB Usage Persist Failed: {e}")
 
     async def get_quotas(self, db: AsyncSession, user_id: str) -> dict:
         """

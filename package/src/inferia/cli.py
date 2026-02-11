@@ -28,90 +28,116 @@ def _load_env():
     load_dotenv(find_dotenv(), override=False)
 
 
-def run_filtration_gateway(queue=None):
+def run_filtration_service(queue=None):
     from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
 
     try:
         if queue:
-            queue.put(ServiceStarting("Filtration Gateway API"))
-        from inferia.gateways.filtration_gateway.main import start_api
+            queue.put(ServiceStarting("Filtration Service"))
+        from inferia.services.filtration.main import start_api
 
         start_api()
         if queue:
             queue.put(
-                ServiceStarted(
-                    "Filtration Gateway API", detail="Listening on port 8000"
-                )
+                ServiceStarted("Filtration Service", detail="Listening on port 8000")
             )
     except Exception as e:
         if queue:
-            queue.put(ServiceFailed("Filtration Gateway API", error=str(e)))
+            queue.put(ServiceFailed("Filtration Service", error=str(e)))
         else:
-            print(f"Error starting Filtration Gateway: {e}")
+            print(f"Error starting Filtration Service: {e}")
 
 
-def run_inference_gateway(queue=None):
+def run_guardrail_service(queue=None):
     from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
 
     try:
         if queue:
-            queue.put(ServiceStarting("Inference Gateway API"))
-        from inferia.gateways.inference_gateway.main import start_api
+            queue.put(ServiceStarting("Guardrail Service"))
 
-        start_api()
+        from inferia.services.guardrail.main import start_api
+
         if queue:
             queue.put(
-                ServiceStarted("Inference Gateway API", detail="Listening on port 8001")
+                ServiceStarted("Guardrail Service", detail="Listening on port 8002")
             )
+
+        start_api()
     except Exception as e:
         if queue:
-            queue.put(ServiceFailed("Inference Gateway API", error=str(e)))
+            queue.put(ServiceFailed("Guardrail Service", error=str(e)))
         else:
-            print(f"Error starting Inference Gateway: {e}")
+            print(f"Error starting Guardrail Service: {e}")
 
 
-def run_orchestration_gateway(queue=None):
+def run_data_service(queue=None):
     from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
-
-    # Helper to inject paths mimicking orchestrator.sh
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    app_path = os.path.join(base_dir, "services/orchestration/app")
-    gateway_path = os.path.join(base_dir, "gateways/orchestration_gateway")
-
-    sys.path.insert(0, app_path)
-    sys.path.insert(0, gateway_path)
 
     try:
         if queue:
-            queue.put(ServiceStarting("Orchestration Gateway API"))
-        from inferia.gateways.orchestration_gateway.main import start_api
+            queue.put(ServiceStarting("Data Service"))
+
+        from inferia.services.data.main import start_api
+
+        if queue:
+            queue.put(ServiceStarted("Data Service", detail="Listening on port 8003"))
+
+        start_api()
+    except Exception as e:
+        if queue:
+            queue.put(ServiceFailed("Data Service", error=str(e)))
+        else:
+            print(f"Error starting Data Service: {e}")
+
+
+def run_inference_service(queue=None):
+    from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
+
+    try:
+        if queue:
+            queue.put(ServiceStarting("Inference Service"))
+        from inferia.services.inference.main import start_api
 
         start_api()
         if queue:
             queue.put(
-                ServiceStarted(
-                    "Orchestration Gateway API", detail="Listening on port 8080"
-                )
+                ServiceStarted("Inference Service", detail="Listening on port 8001")
             )
     except Exception as e:
         if queue:
-            queue.put(ServiceFailed("Orchestration Gateway API", error=str(e)))
+            queue.put(ServiceFailed("Inference Service", error=str(e)))
         else:
-            print(f"Error starting Orchestration Gateway: {e}")
+            print(f"Error starting Inference Service: {e}")
+
+
+def run_orchestration_service(queue=None):
+    from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
+
+    try:
+        if queue:
+            queue.put(ServiceStarting("Orchestration Service"))
+        from inferia.services.orchestration.main import start_api
+
+        start_api()
+        if queue:
+            queue.put(
+                ServiceStarted("Orchestration Service", detail="Listening on port 8080")
+            )
+    except Exception as e:
+        if queue:
+            queue.put(ServiceFailed("Orchestration Service", error=str(e)))
+        else:
+            print(f"Error starting Orchestration Service: {e}")
 
 
 def run_worker(queue=None):
     from inferia.startup_events import ServiceStarting, ServiceStarted, ServiceFailed
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    app_path = os.path.join(base_dir, "services/orchestration/app")
-    sys.path.insert(0, app_path)
-
     try:
         if queue:
             queue.put(ServiceStarting("Orchestration Worker"))
         import asyncio
-        from inferia.services.orchestration.app.services.model_deployment.worker_main import (
+        from inferia.services.orchestration.services.model_deployment.worker_main import (
             main,
         )
 
@@ -137,7 +163,7 @@ def run_nosana_sidecar(queue=None):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     sidecar_dir = os.path.join(
-        base_dir, "services/orchestration/app/services/depin-sidecar"
+        base_dir, "services/orchestration/services/depin-sidecar"
     )
 
     print(f"[DePIN] Starting Sidecar from {sidecar_dir}")
@@ -268,7 +294,7 @@ def run_orchestration_stack():
     queue = multiprocessing.Queue()
     processes = [
         multiprocessing.Process(
-            target=run_orchestration_gateway, name="orchestration-api", args=(queue,)
+            target=run_orchestration_service, name="orchestration-api", args=(queue,)
         ),
         multiprocessing.Process(
             target=run_worker, name="orchestration-worker", args=(queue,)
@@ -297,12 +323,12 @@ def run_orchestration_stack():
 def run_all():
     # Run all services efficiently by spawning them as direct children
     queue = multiprocessing.Queue()
-    ui = StartupUI(queue, total=6)
+    ui = StartupUI(queue, total=8)
 
     processes = [
         # Orchestration Stack
         multiprocessing.Process(
-            target=run_orchestration_gateway,
+            target=run_orchestration_service,
             name="orchestration-api",
             args=(queue,),
         ),
@@ -316,14 +342,25 @@ def run_all():
             name="nosana-sidecar",
             args=(queue,),
         ),
+        # Microservices
+        multiprocessing.Process(
+            target=run_guardrail_service,
+            name="guardrail",
+            args=(queue,),
+        ),
+        multiprocessing.Process(
+            target=run_data_service,
+            name="data",
+            args=(queue,),
+        ),
         # Inference & Filtration
         multiprocessing.Process(
-            target=run_inference_gateway,
+            target=run_inference_service,
             name="inference",
             args=(queue,),
         ),
         multiprocessing.Process(
-            target=run_filtration_gateway,
+            target=run_filtration_service,
             name="filtration",
             args=(queue,),
         ),
@@ -383,7 +420,14 @@ def main(argv=None):
         "service",
         nargs="?",
         default="all",
-        choices=["all", "filtration", "inference", "orchestration"],
+        choices=[
+            "all",
+            "filtration",
+            "inference",
+            "orchestration",
+            "guardrail",
+            "data",
+        ],
         help="Service to start (default: all)",
     )
 
@@ -412,19 +456,25 @@ def main(argv=None):
                 if wants_help(flags):
                     show_filtration_docs()
                 else:
-                    run_filtration_gateway()
+                    run_filtration_service()
 
             elif service == "inference":
                 if wants_help(flags):
                     show_inference_docs()
                 else:
-                    run_inference_gateway()
+                    run_inference_service()
 
             elif service == "orchestration":
                 if wants_help(flags):
                     show_orchestration_docs()
                 else:
                     run_orchestration_stack()
+
+            elif service == "guardrail":
+                run_guardrail_service()
+
+            elif service == "data":
+                run_data_service()
 
         elif cmd == "init":
             run_init()

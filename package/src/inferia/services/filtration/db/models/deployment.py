@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ..database import Base
 import uuid
-from db.security import EncryptedJSON
+from inferia.services.filtration.db.security import EncryptedJSON
 
 class Deployment(Base):
     __tablename__ = "model_deployments"

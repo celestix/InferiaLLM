@@ -22,13 +22,13 @@ gateway_path = project_root / "apps" / "filtration-gateway"
 sys.path.insert(0, str(gateway_path))
 
 from app import app
-from rbac.mock_data import mock_db
-from config import settings
-from rbac.auth import auth_service
-from db.models import User as DBUser
+from inferia.services.filtration.rbac.mock_data import mock_db
+from inferia.services.filtration.config import settings
+from inferia.services.filtration.rbac.auth import auth_service
+from inferia.services.filtration.db.models import User as DBUser
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from db.database import get_db
+from inferia.services.filtration.db.database import get_db
 
 
 @pytest.fixture

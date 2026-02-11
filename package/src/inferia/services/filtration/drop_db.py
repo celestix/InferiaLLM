@@ -7,9 +7,9 @@ from sqlalchemy import text
 # Adjust path to find modules
 sys.path.append(str(Path(__file__).parent))
 
-from db.database import engine, Base
+from inferia.services.filtration.db.database import engine, Base
 # Import all DB models to register them with Base.metadata
-from db.models import (
+from inferia.services.filtration.db.models import (
     user, organization, user_organization, role, invitation, 
     api_key, audit_log, deployment, inference_log, policy, usage
 )

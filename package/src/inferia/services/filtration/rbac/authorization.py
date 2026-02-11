@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import HTTPException, status
 
-from models import PermissionEnum, UserContext
+from inferia.services.filtration.models import PermissionEnum, UserContext
 
 # Role to Permission Mapping
 # Role to Permission Mapping - DEPRECATED
