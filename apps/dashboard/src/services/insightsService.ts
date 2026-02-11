@@ -28,6 +28,7 @@ export interface InsightsLatency {
 export interface InsightsThroughput {
     requests_per_minute: number;
     tokens_per_second: number;
+    avg_tokens_per_second: number;
 }
 
 export interface InsightsSummaryResponse {

@@ -7,6 +7,7 @@ import {
     Layers3,
     TrendingUp,
     TriangleAlert,
+    Zap,
 } from "lucide-react";
 import {
     Area,
@@ -336,7 +337,7 @@ export default function Insights() {
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <MetricCard
                     icon={Activity}
                     title="Requests"
@@ -359,7 +360,13 @@ export default function Insights() {
                     icon={Gauge}
                     title="Avg Latency (TTFT)"
                     value={isInitialLoading ? "..." : `${formatNumber(summary?.latency_ms.avg || 0)} ms`}
-                    subtitle={`${formatNumber(summary?.throughput.requests_per_minute || 0)} req/min`}
+                    subtitle={`${formatNumber(summary?.throughput.requests_per_minute || 0)} req/min (active time)`}
+                />
+                <MetricCard
+                    icon={Zap}
+                    title="Avg Token/s"
+                    value={isInitialLoading ? "..." : formatNumber(summary?.throughput.avg_tokens_per_second || 0)}
+                    subtitle={`${formatNumber(summary?.throughput.tokens_per_second || 0)} tok/s overall`}
                 />
             </div>
 
@@ -557,7 +564,8 @@ export default function Insights() {
                 <div className="border-b px-4 py-3">
                     <h3 className="font-semibold">Detailed Inference Logs</h3>
                     <p className="text-xs text-muted-foreground">
-                        Throughput: {formatNumber(summary?.throughput.requests_per_minute || 0)} req/min | {formatNumber(summary?.throughput.tokens_per_second || 0)} tok/s
+                        Avg token speed: {formatNumber(summary?.throughput.avg_tokens_per_second || 0)} tok/s |
+                        Overall token speed: {formatNumber(summary?.throughput.tokens_per_second || 0)} tok/s
                     </p>
                 </div>
 

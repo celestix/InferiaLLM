@@ -34,6 +34,7 @@ class InsightsLatency(BaseModel):
 class InsightsThroughput(BaseModel):
     requests_per_minute: float = 0.0
     tokens_per_second: float = 0.0
+    avg_tokens_per_second: float = 0.0
 
 
 class InsightsSummaryResponse(BaseModel):

@@ -105,6 +105,11 @@ def _latency_expr():
     return func.coalesce(DBInferenceLog.ttft_ms, DBInferenceLog.latency_ms)
 
 
+def _active_duration_expr():
+    # Throughput uses full request duration when available.
+    return func.coalesce(DBInferenceLog.latency_ms, DBInferenceLog.ttft_ms)
+
+
 @router.get("/summary", response_model=InsightsSummaryResponse)
 async def get_insights_summary(
     request: Request,
@@ -142,6 +147,10 @@ async def get_insights_summary(
             func.avg(_latency_expr())
             .filter(_latency_expr().isnot(None))
             .label("avg_latency_ms"),
+            func.coalesce(func.sum(_active_duration_expr()), 0).label("active_duration_ms"),
+            func.avg(DBInferenceLog.tokens_per_second)
+            .filter(DBInferenceLog.tokens_per_second.isnot(None))
+            .label("avg_tokens_per_second"),
         )
         .select_from(DBInferenceLog)
         .join(DBDeployment, DBInferenceLog.deployment_id == DBDeployment.id)
@@ -158,11 +167,17 @@ async def get_insights_summary(
     completion_tokens = _to_int(summary.completion_tokens)
     total_tokens = _to_int(summary.total_tokens)
     avg_latency = _to_float(summary.avg_latency_ms)
+    active_duration_ms = _to_float(getattr(summary, "active_duration_ms", 0.0))
+    avg_tokens_per_second = _to_float(getattr(summary, "avg_tokens_per_second", 0.0))
 
     success_rate = (successful_requests / requests * 100.0) if requests > 0 else 0.0
-    duration_seconds = max((normalized_end - normalized_start).total_seconds(), 1.0)
-    requests_per_minute = requests / (duration_seconds / 60.0)
-    tokens_per_second = total_tokens / duration_seconds
+    active_duration_seconds = active_duration_ms / 1000.0
+    if active_duration_seconds > 0:
+        requests_per_minute = requests / (active_duration_seconds / 60.0)
+        tokens_per_second = completion_tokens / active_duration_seconds
+    else:
+        requests_per_minute = 0.0
+        tokens_per_second = 0.0
 
     return InsightsSummaryResponse(
         totals=InsightsTotals(
@@ -176,7 +191,9 @@ async def get_insights_summary(
         ),
         latency_ms=InsightsLatency(avg=avg_latency),
         throughput=InsightsThroughput(
-            requests_per_minute=requests_per_minute, tokens_per_second=tokens_per_second
+            requests_per_minute=requests_per_minute,
+            tokens_per_second=tokens_per_second,
+            avg_tokens_per_second=avg_tokens_per_second,
         ),
     )
 

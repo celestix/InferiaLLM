@@ -172,6 +172,8 @@ async def test_summary_handles_mixed_latency_and_zero_defaults():
         completion_tokens=40,
         total_tokens=60,
         avg_latency_ms=140.5,
+        active_duration_ms=2000.0,
+        avg_tokens_per_second=20.0,
     )
     db.execute.return_value = result
 
@@ -188,6 +190,7 @@ async def test_summary_handles_mixed_latency_and_zero_defaults():
     assert response.totals.requests == 2
     assert response.latency_ms.avg == 140.5
     assert response.throughput.tokens_per_second > 0
+    assert response.throughput.avg_tokens_per_second == 20.0
 
 
 @pytest.mark.asyncio
