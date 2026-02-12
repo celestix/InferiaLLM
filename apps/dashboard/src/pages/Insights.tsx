@@ -1,14 +1,17 @@
-import { type ComponentType, type ReactNode, useMemo, useState } from "react";
+import { type ComponentType, type ReactNode, useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
     Activity,
     Clock3,
+    Download,
     Gauge,
     Layers3,
+    RotateCcw,
     TrendingUp,
     TriangleAlert,
     Zap,
 } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
     Area,
     AreaChart,
@@ -34,6 +37,9 @@ import {
 } from "@/services/insightsService";
 
 type TimePreset = "24h" | "7d" | "30d" | "custom";
+
+const QUERY_STALE_TIME = 30 * 1000;
+const IP_DEBOUNCE_DELAY = 300;
 
 function toLocalDateTimeInputValue(date: Date): string {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -66,11 +72,12 @@ export default function Insights() {
     const [customStart, setCustomStart] = useState<string>(toLocalDateTimeInputValue(defaultStart));
     const [customEnd, setCustomEnd] = useState<string>(toLocalDateTimeInputValue(now));
     const [deploymentId, setDeploymentId] = useState<string>("");
-    const [model, setModel] = useState<string>("");
     const [ipAddress, setIpAddress] = useState<string>("");
     const [status, setStatus] = useState<InsightsStatus>("all");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(20);
+
+    const debouncedIpAddress = useDebouncedValue(ipAddress.trim(), IP_DEBOUNCE_DELAY);
 
     const range = useMemo(() => {
         const end = new Date();
@@ -97,11 +104,10 @@ export default function Insights() {
             start_time: range.start.toISOString(),
             end_time: range.end.toISOString(),
             deployment_id: deploymentId || undefined,
-            model: model || undefined,
-            ip_address: ipAddress.trim() || undefined,
+            ip_address: debouncedIpAddress || undefined,
             status,
         }),
-        [range.start, range.end, deploymentId, model, ipAddress, status]
+        [range.start, range.end, deploymentId, debouncedIpAddress, status]
     );
 
     const granularity: InsightsGranularity = useMemo(() => {
@@ -116,6 +122,7 @@ export default function Insights() {
                 start_time: baseParams.start_time,
                 end_time: baseParams.end_time,
             }),
+        staleTime: QUERY_STALE_TIME,
     });
 
     const summaryQuery = useQuery({
@@ -125,11 +132,11 @@ export default function Insights() {
             baseParams.start_time,
             baseParams.end_time,
             deploymentId,
-            model,
-            ipAddress,
+            debouncedIpAddress,
             status,
         ],
         queryFn: () => insightsService.getSummary(baseParams),
+        staleTime: QUERY_STALE_TIME,
     });
 
     const timeseriesQuery = useQuery({
@@ -139,12 +146,12 @@ export default function Insights() {
             baseParams.start_time,
             baseParams.end_time,
             deploymentId,
-            model,
-            ipAddress,
+            debouncedIpAddress,
             status,
             granularity,
         ],
         queryFn: () => insightsService.getTimeseries({ ...baseParams, granularity }),
+        staleTime: QUERY_STALE_TIME,
     });
 
     const logsQuery = useQuery({
@@ -154,8 +161,7 @@ export default function Insights() {
             baseParams.start_time,
             baseParams.end_time,
             deploymentId,
-            model,
-            ipAddress,
+            debouncedIpAddress,
             status,
             page,
             pageSize,
@@ -166,6 +172,7 @@ export default function Insights() {
                 limit: pageSize,
                 offset: (page - 1) * pageSize,
             }),
+        staleTime: QUERY_STALE_TIME,
     });
 
     const summary = summaryQuery.data;
@@ -227,6 +234,38 @@ export default function Insights() {
     const isInitialLoading = summaryQuery.isLoading || timeseriesQuery.isLoading || logsQuery.isLoading;
     const hasNoData = (summary?.totals.requests ?? 0) === 0 && !isInitialLoading;
 
+    const hasActiveFilters = deploymentId !== "" || ipAddress !== "" || status !== "all";
+
+    const clearFilters = useCallback(() => {
+        setDeploymentId("");
+        setIpAddress("");
+        setStatus("all");
+        setPage(1);
+    }, []);
+
+    const exportLogsToCSV = useCallback(() => {
+        if (!logs?.items.length) return;
+        const headers = ["Timestamp", "Deployment ID", "Model", "IP Address", "Prompt Tokens", "Completion Tokens", "Total Tokens", "Latency (ms)", "Status"];
+        const rows = logs.items.map((log) => [
+            log.created_at,
+            log.deployment_id,
+            log.model,
+            log.ip_address || "",
+            log.prompt_tokens,
+            log.completion_tokens,
+            log.total_tokens,
+            log.ttft_ms ?? log.latency_ms ?? "",
+            log.status_code,
+        ]);
+        const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `insights-logs-${new Date().toISOString().split("T")[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }, [logs]);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-1">
@@ -237,7 +276,7 @@ export default function Insights() {
             </div>
 
             <div className="rounded-xl border bg-card p-4">
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-7">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
                     <div className="space-y-1">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time range</label>
                         <select
@@ -304,25 +343,6 @@ export default function Insights() {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Model</label>
-                        <select
-                            value={model}
-                            onChange={(e) => {
-                                setModel(e.target.value);
-                                setPage(1);
-                            }}
-                            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                        >
-                            <option value="">All models</option>
-                            {(filters?.models || []).map((modelOption) => (
-                                <option key={modelOption} value={modelOption}>
-                                    {modelOption}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="space-y-1">
                         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</label>
                         <select
                             value={status}
@@ -360,6 +380,18 @@ export default function Insights() {
                         </datalist>
                     </div>
                 </div>
+                {hasActiveFilters && (
+                    <div className="mt-3 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Clear all filters
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -586,12 +618,24 @@ export default function Insights() {
             )}
 
             <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <div className="border-b px-4 py-3">
-                    <h3 className="font-semibold">Detailed Inference Logs</h3>
-                    <p className="text-xs text-muted-foreground">
-                        Avg token speed: {formatNumber(summary?.throughput.avg_tokens_per_second || 0)} tok/s |
-                        Overall token speed: {formatNumber(summary?.throughput.tokens_per_second || 0)} tok/s
-                    </p>
+                <div className="border-b px-4 py-3 flex items-start justify-between">
+                    <div>
+                        <h3 className="font-semibold">Detailed Inference Logs</h3>
+                        <p className="text-xs text-muted-foreground">
+                            Avg token speed: {formatNumber(summary?.throughput.avg_tokens_per_second || 0)} tok/s |
+                            Overall token speed: {formatNumber(summary?.throughput.tokens_per_second || 0)} tok/s
+                        </p>
+                    </div>
+                    {logs?.items.length ? (
+                        <button
+                            type="button"
+                            onClick={exportLogsToCSV}
+                            className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Export CSV
+                        </button>
+                    ) : null}
                 </div>
 
                 <div className="overflow-x-auto">
