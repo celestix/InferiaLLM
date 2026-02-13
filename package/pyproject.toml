@@ -140,9 +140,9 @@ inferia = [
   "dashboard/**/*",
   "infra/schema/*.sql",
   "infra/schema/migrations/*.sql",
-  "services/orchestration/app/services/depin-sidecar/package.json",
-  "services/orchestration/app/services/depin-sidecar/tsconfig.json",
-  "services/orchestration/app/services/depin-sidecar/src/**/*"
+  "services/orchestration/services/depin-sidecar/package.json",
+  "services/orchestration/services/depin-sidecar/tsconfig.json",
+  "services/orchestration/services/depin-sidecar/src/**/*"
 ]
 
 [tool.setuptools.exclude-package-data]

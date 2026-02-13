@@ -281,10 +281,47 @@ def run_dashboard(queue=None):
             queue.put(ServiceFailed("Dashboard", str(e)))
 
 
+def build_sidecar():
+    """
+    Builds the DePIN Sidecar (Node.js service).
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    sidecar_dir = os.path.join(
+        base_dir, "services/orchestration/services/depin-sidecar"
+    )
+
+    print(f"[inferia:init] Building Sidecar at {sidecar_dir}")
+
+    if not os.path.isdir(sidecar_dir):
+        print(f"[inferia:init] Error: Sidecar directory not found at {sidecar_dir}")
+        return
+
+    node_modules = os.path.join(sidecar_dir, "node_modules")
+
+    try:
+        if not os.path.isdir(node_modules):
+            print("[inferia:init] Installing sidecar dependencies...")
+            subprocess.run(["npm", "install"], cwd=sidecar_dir, check=True)
+
+        print("[inferia:init] Building sidecar...")
+        subprocess.run(["npm", "run", "build"], cwd=sidecar_dir, check=True)
+        print("[inferia:init] Sidecar built successfully.")
+
+    except FileNotFoundError:
+        print(
+            "[inferia:init] Error: 'npm' command not found. Ensure Node.js is installed."
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"[inferia:init] Sidecar build failed: {e}")
+    except Exception as e:
+        print(f"[inferia:init] Error building sidecar: {e}")
+
+
 def run_init():
     from inferia.cli_init import init_databases
 
     init_databases()
+    build_sidecar()
 
 
 def run_orchestration_stack():

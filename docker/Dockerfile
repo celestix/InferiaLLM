@@ -26,11 +26,11 @@ FROM node:20-slim AS node-builder
 WORKDIR /build/depin-sidecar
 
 # Copy package files first for better caching
-COPY package/src/inferia/services/orchestration/app/services/depin-sidecar/package*.json ./
+COPY package/src/inferia/services/orchestration/services/depin-sidecar/package*.json ./
 RUN npm install
 
 # Copy source and build
-COPY package/src/inferia/services/orchestration/app/services/depin-sidecar/ ./
+COPY package/src/inferia/services/orchestration/services/depin-sidecar/ ./
 RUN npm run build
 
 # ==========================================
@@ -94,7 +94,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built sidecar from node-builder
-COPY --from=node-builder /build/depin-sidecar /app/package/src/inferia/services/orchestration/app/services/depin-sidecar
+COPY --from=node-builder /build/depin-sidecar /app/package/src/inferia/services/orchestration/services/depin-sidecar
 
 EXPOSE 8080 3000 50051
 CMD ["inferiallm", "start", "orchestration"]
