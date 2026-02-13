@@ -50,9 +50,12 @@ services:
     ports:
       - "8000:8000"   # Filtration Gateway
       - "8001:8001"   # Inference Gateway
+      - "8002:8002"   # Guardrail Engine
+      - "8003:8003"   # Data Engine
       - "8080:8080"   # Orchestration Gateway
       - "3000:3000"   # DePIN Sidecar
       - "3001:3001"   # Dashboard
+      - "50051:50051" # gRPC
     depends_on:
       postgres:
         condition: service_healthy
