@@ -1,21 +1,21 @@
 import json
 import logging
 import time
-from typing import Any, AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict, List
 
 logger = logging.getLogger(__name__)
 
 
 class StreamProcessor:
     """
-    Handles processing of SSE streams, including token counting patterns 
+    Handles processing of SSE streams, including token counting patterns
     (OpenAI usage/content) and timing.
     """
 
     _tiktoken = None
     _tiktoken_checked = False
     _encoder_cache: Dict[str, Any] = {}
-    
+
     @staticmethod
     async def process_stream(
         stream_generator: AsyncGenerator,
@@ -24,7 +24,7 @@ class StreamProcessor:
     ) -> AsyncGenerator[bytes, None]:
         """
         Wraps a stream generator to track usage.
-        
+
         Args:
             stream_generator: The raw byte stream from upstream
             start_time: Request start time (for TTFT)
@@ -161,6 +161,37 @@ class StreamProcessor:
 
         # Byte-length fallback (avoids word-split; rough approximation).
         return max(1, (len(text.encode("utf-8")) + 3) // 4)
+
+    @classmethod
+    def estimate_prompt_tokens(
+        cls, messages: List[Dict[str, Any]], model_name: str
+    ) -> int:
+        """
+        Estimate prompt tokens from a list of chat messages.
+        Falls back to tiktoken estimation if available.
+        """
+        if not messages:
+            return 0
+
+        total = 0
+        encoder = cls._get_encoder(model_name)
+
+        for msg in messages:
+            content = msg.get("content", "")
+            if content:
+                if encoder is not None:
+                    try:
+                        total += len(encoder.encode(str(content)))
+                    except Exception:
+                        total += max(1, len(str(content).encode("utf-8")) // 4)
+                else:
+                    total += max(1, len(str(content).encode("utf-8")) // 4)
+
+        # Add tokens for message format overhead (approximate)
+        # Each message has role and format overhead (~4 tokens per message)
+        total += len(messages) * 4
+
+        return total
 
     @classmethod
     def _get_encoder(cls, model_name: str):

@@ -214,12 +214,19 @@ class OrchestrationService:
         log_payloads,
         ip_address,
     ):
+        # Calculate prompt tokens from messages upfront
+        tokenizer_model = provider_payload.get("model") or model
+        messages = provider_payload.get("messages", [])
+        prompt_tokens = StreamProcessor.estimate_prompt_tokens(
+            messages, tokenizer_model
+        )
+
         # Tracker state
         tracker = {
-            "prompt_tokens": 0,
+            "prompt_tokens": prompt_tokens,
             "completion_tokens": 0,
             "ttft_ms": None,
-            "_tokenizer_model": provider_payload.get("model") or model,
+            "_tokenizer_model": tokenizer_model,
         }
 
         stream_gen = GatewayService.stream_upstream(
