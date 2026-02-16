@@ -41,6 +41,10 @@ class Settings(BaseSettings):
         default="http://localhost:3000", validation_alias="NOSANA_SIDECAR_URL"
     )
 
+    internal_api_key: str = Field(
+        default="", validation_alias="INTERNAL_API_KEY"
+    )
+
     @property
     def is_development(self) -> bool:
         return self.environment == "development"
