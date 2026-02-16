@@ -22,10 +22,11 @@ class FiltrationGatewayClient:
         self.timeout = settings.request_timeout
         self._client: Optional[httpx.AsyncClient] = None
         # Local in-memory cache for resolved contexts to reduce network hops
-        # TTL = 10s (Reduced from 60s for faster settings propagation)
         import cachetools
 
-        self.context_cache = cachetools.TTLCache(maxsize=1000, ttl=10)
+        self.context_cache = cachetools.TTLCache(
+            maxsize=settings.context_cache_maxsize, ttl=settings.context_cache_ttl
+        )
 
     def _get_client(self) -> httpx.AsyncClient:
         """Get or create the shared httpx client."""

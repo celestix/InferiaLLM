@@ -55,6 +55,21 @@ class Settings(BaseSettings):
     # Timeouts
     request_timeout: int = 30
 
+    # Context Cache Settings
+    # Cache duration for resolved API key contexts (deployment, guardrails, etc.)
+    context_cache_ttl: int = Field(
+        default=30,
+        alias="CONTEXT_CACHE_TTL",
+        validation_alias="CONTEXT_CACHE_TTL",
+        description="TTL in seconds for API key context cache",
+    )
+    context_cache_maxsize: int = Field(
+        default=1000,
+        alias="CONTEXT_CACHE_MAXSIZE",
+        validation_alias="CONTEXT_CACHE_MAXSIZE",
+        description="Maximum number of entries in API key context cache",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
