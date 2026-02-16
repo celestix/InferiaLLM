@@ -16,7 +16,7 @@ const deploymentTypes = [
 ]
 
 const computeEngines = [
-    { id: "vllm", name: "vLLM", desc: "High-throughput and memory-efficient LLM serving engine.", image: "docker.io/vllm/vllm-openai:latest", icon: Cpu, types: ["inference"] },
+    { id: "vllm", name: "vLLM", desc: "High-throughput and memory-efficient LLM serving engine.", image: "docker.io/vllm/vllm-openai:v0.14.0", icon: Cpu, types: ["inference"] },
     //{ id: "triton", name: "NVIDIA Triton", desc: "Standardized inference server for any model type.", image: "nvcr.io/nvidia/tritonserver:23.10-py3", icon: Layers, types: ["inference"] },
     { id: "ollama", name: "Ollama", desc: "Run huge models locally with ease.", image: "ollama/ollama:latest", icon: Terminal, types: ["inference"] },
     { id: "pytorch", name: "PyTorch", desc: "Standard deep learning container for training.", image: "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime", icon: Brain, types: ["training"] },
@@ -150,7 +150,7 @@ export default function NewDeployment() {
             ]
 
             const spec = {
-                image: "docker.io/vllm/vllm-openai:latest",
+                image: "docker.io/vllm/vllm-openai:v0.14.0",
                 cmd: cmd,
                 env: env,
                 expose: expose,

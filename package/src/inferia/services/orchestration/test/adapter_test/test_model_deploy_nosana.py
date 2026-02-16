@@ -16,7 +16,6 @@ GRPC_ADDR = "localhost:50051"
 
 async def run_test():
     async with grpc.aio.insecure_channel(GRPC_ADDR) as channel:
-
         # ============================================================
         # 1. CREATE COMPUTE POOL (NOSANA + RTX 3060)
         # ============================================================
@@ -61,7 +60,7 @@ async def run_test():
                 name=model_name,
                 version="v1",
                 backend="vllm",
-                artifact_uri="docker.io/vllm/vllm-openai:latest",
+                artifact_uri="docker.io/vllm/vllm-openai:v0.14.0",
                 config_json="""
                 {
                     "task": "text-generation",
@@ -104,9 +103,7 @@ async def run_test():
 
         while True:
             resp = await deployer.GetDeployment(
-                model_deployment_pb2.GetDeploymentRequest(
-                    deployment_id=deployment_id
-                )
+                model_deployment_pb2.GetDeploymentRequest(deployment_id=deployment_id)
             )
 
             print(f"   state = {resp.state}")
@@ -127,9 +124,7 @@ async def run_test():
         print("\n==> Listing deployments")
 
         list_resp = await deployer.ListDeployments(
-            model_deployment_pb2.ListDeploymentsRequest(
-                pool_id=pool_id
-            )
+            model_deployment_pb2.ListDeploymentsRequest(pool_id=pool_id)
         )
 
         for d in list_resp.deployments:
@@ -144,17 +139,11 @@ async def run_test():
         # stoping jobs that is created during test
         print("\n==> Cleaning up: Deleting deployment and compute pool")
         await deployer.DeleteDeployment(
-            model_deployment_pb2.DeleteDeploymentRequest(
-                deployment_id=deployment_id
-            )
+            model_deployment_pb2.DeleteDeploymentRequest(deployment_id=deployment_id)
         )
         print("✔ Deployment deleted")
 
-        await pool_mgr.DeletePool(
-            compute_pool_pb2.DeletePoolRequest(
-                pool_id=pool_id
-            )
-        )
+        await pool_mgr.DeletePool(compute_pool_pb2.DeletePoolRequest(pool_id=pool_id))
         print("✔ Compute pool deleted")
 
         print("\n✅ NOSANA DEPLOYMENT TEST PASSED")
